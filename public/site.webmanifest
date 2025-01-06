@@ -1,0 +1,7 @@
+{
+  "name": "3D Model Renderer",
+  "short_name": "3DRenderer",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}
