@@ -4,18 +4,20 @@ import { Canvas } from '@react-three/fiber';
 import { Bounds, GizmoHelper, GizmoViewport, Loader, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from "three";
 import TopPanel from '../simulation/TopPanel';
+import AboutMesh from '../simulation/AboutMesh';
+import StatusBar from '../simulation/StatusBar';
 
 const getGlbObj = (file) => {
   const gltf = useGLTF(file);
   return gltf;
 }
 
-function Model({ fileUrl }) {
+function Model({ fileUrl, setMeshItems }) {
   const gltf = getGlbObj(fileUrl);
-
   useEffect(() => {
     const modelSize = 10
     let gltfScene = gltf.scene
+    setMeshItems(gltf.scene)
     if (gltf) {
       const box = new THREE.Box3().setFromObject(gltfScene);
       const size = new THREE.Vector3();
@@ -37,11 +39,11 @@ const initial = {
   light: 2
 }
 
-function GLTF({ file }) {
-
+const GLTF = ({ file: { file, name, extension } }) => {
   const [fileUrl, setFileUrl] = useState(null);
   const [reset, setReset] = useState(false)
   const [light, setLight] = useState(initial.light);
+  const [meshItems, setMeshItems] = useState(null)
 
   useEffect(() => {
     if (file instanceof File) {
@@ -70,7 +72,7 @@ function GLTF({ file }) {
   }
 
   return (
-    <div className=' h-screen w-screen'>
+    <div className=' h-dvh w-screen'>
       <ToastContainer autoClose={1800} pauseOnHover={false} />
       <Canvas>
         <ambientLight intensity={light} />
@@ -79,7 +81,7 @@ function GLTF({ file }) {
         <OrbitControls />
         <Bounds fit observe margin={3}  >
           <Suspense fallback={null}>
-            {fileUrl && <Model fileUrl={fileUrl} />}
+            {fileUrl && <Model fileUrl={fileUrl} setMeshItems={setMeshItems} />}
           </Suspense>
         </Bounds>
         <GizmoHelper
@@ -90,7 +92,12 @@ function GLTF({ file }) {
         </GizmoHelper>
       </Canvas>
       <Loader />
-      <TopPanel fallback={fallback} initial={initial} disable={["random"]} />
+      {meshItems && <>
+        <TopPanel meshItems={meshItems} fallback={fallback} initial={initial} disable={["random"]} />
+        <AboutMesh meshItems={meshItems} fileInfo={{ name, extension }} />
+        {/* <StatusBar meshItems={meshItems} /> */}
+      </>
+      }
     </div>
   )
 }

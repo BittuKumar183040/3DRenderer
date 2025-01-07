@@ -4,8 +4,10 @@ import { PiVectorThreeDuotone } from "react-icons/pi";
 const FileUpload = ({ fileData }) => {
     const sendBack = (file) => {
         let isValid = true
-        let extension = file.name.split(".").pop()
-        isValid ? fileData({ file, name: file.name, extension }) : toast.error("Not a valid file.")
+        const fileInfo = file.name
+        const name = fileInfo.split(".").slice(0, -1).join(".")
+        const extension = fileInfo.split(".").pop()
+        isValid ? fileData({ file, name, extension }) : toast.error("Not a valid file.")
     }
 
     const byChoose = (e) => {
@@ -23,7 +25,7 @@ const FileUpload = ({ fileData }) => {
                 bg-white rounded-lg shadow-2xl p-4 flex flex-col gap-4 justify-center items-center overflow-hidden'
         >
             <PiVectorThreeDuotone size={80} className=' opacity-50 ' />
-            <p className=' text-sm tracking-wide'>Please upload the 3d file to visulize.</p>
+            <p className=' text-sm tracking-wide'>Please upload the 3d file to visualize.</p>
             <p className=' p-2 px-6 border-2 border-gray-400 rounded-md'>Browse computer</p>
             <input type='file'
                 title="Choose file"

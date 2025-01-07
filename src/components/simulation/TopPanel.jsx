@@ -2,8 +2,9 @@ import React, { useState } from 'react'
 import { BiReset } from "react-icons/bi";
 import { MdDriveFolderUpload } from "react-icons/md";
 import { CgLoadbar } from "react-icons/cg";
+import SelectMenu from '../module/SelectMenu';
 
-const TopPanel = ({ fallback, initial, disable = [] }) => {
+const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
 
   const [range, setRange] = useState(initial.light)
 
@@ -14,6 +15,10 @@ const TopPanel = ({ fallback, initial, disable = [] }) => {
   const handleChange = (e) => {
     setRange(e.target.value)
     sendBack("ambient", { value: e.target.value })
+  }
+
+  const handleSelectItemClick = (e) => {
+    console.log(e)
   }
 
   return (
@@ -29,13 +34,13 @@ const TopPanel = ({ fallback, initial, disable = [] }) => {
       </div>
       <div className=' flex items-center text-xs gap-1 p-1 border rounded-lg shadow-sm'>
         <label htmlFor='range'>Brightness</label>
-        <input type='range' onChange={handleChange} min={1} max={10} value={range} />
+        <input type='range' onChange={handleChange} min={1} max={10} value={range} className='w-16 sm:w-28' />
       </div>
-      <div className=' relative flex items-center flex-1 justify-end gap-2'>
-        {/* <p className=' text-sm '>Choose</p> */}
-        {/* <ChooseFile /> */}
+      <div className=' relative flex items-center flex-1 justify-end gap-4'>
+        <SelectMenu title={"Objects"} items={meshItems.children} handleClick={handleSelectItemClick} />
         <MdDriveFolderUpload size={25} className=' p-0.5 cursor-pointer opacity-70 active:scale-90' onClick={() => location.reload()} />
       </div>
+
     </div>
   )
 }

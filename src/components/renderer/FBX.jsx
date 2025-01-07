@@ -4,18 +4,20 @@ import { Canvas } from '@react-three/fiber';
 import { Bounds, GizmoHelper, GizmoViewport, Grid, OrbitControls, PerspectiveCamera, useFBX } from '@react-three/drei'
 import * as THREE from "three";
 import TopPanel from '../simulation/TopPanel';
+import AboutMesh from '../simulation/AboutMesh';
 
 const getFbxObj = (file) => {
   const fbx = useFBX(file);
   return fbx;
 }
 
-function Model({ fileUrl }) {
+function Model({ fileUrl, setMeshItems }) {
 
   const fbx = getFbxObj(fileUrl)
   useEffect(() => {
     const modelSize = 10
     if (fbx) {
+      setMeshItems(fbx)
       const box = new THREE.Box3().setFromObject(fbx);
       const size = new THREE.Vector3();
       box.getSize(size);
@@ -36,11 +38,12 @@ const initial = {
   light: 2
 }
 
-const FBX = ({ file }) => {
+const FBX = ({ file: { file, name, extension } }) => {
 
   const [fileUrl, setFileUrl] = useState(null);
   const [reset, setReset] = useState(false);
   const [light, setLight] = useState(initial.light);
+  const [meshItems, setMeshItems] = useState(null)
 
   useEffect(() => {
     if (file instanceof File) {
@@ -86,7 +89,7 @@ const FBX = ({ file }) => {
   }
 
   return (
-    <div className='relative h-screen w-screen'>
+    <div className='relative h-dvh w-screen'>
       {
         fileUrl && <>
           <ToastContainer autoClose={1000} pauseOnHover={false} />
@@ -100,7 +103,7 @@ const FBX = ({ file }) => {
             <PerspectiveCamera makeDefault={true} position={[0, 100, 250]} fov={75} />
             <OrbitControls />
             <Bounds fit margin={2} observe>
-              <Model fileUrl={fileUrl} />
+              <Model fileUrl={fileUrl} setMeshItems={setMeshItems} />
             </Bounds>
             <GizmoHelper
               alignment="bottom-left"
@@ -110,7 +113,12 @@ const FBX = ({ file }) => {
             </GizmoHelper>
             <Grid cellSize={12} scale={100} />
           </Canvas>
-          <TopPanel fallback={fallback} initial={initial} />
+          {meshItems && <>
+            <TopPanel meshItems={meshItems} fallback={fallback} initial={initial} />
+            <AboutMesh meshItems={meshItems} fileInfo={{ name, extension }} />
+            {/* <StatusBar meshItems={meshItems} /> */}
+          </>
+          }
         </>
       }
     </div>

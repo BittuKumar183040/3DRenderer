@@ -12,8 +12,8 @@ function App() {
 
       {{
         "": <FileUpload fileData={setFile} />,
-        "glb": <GLTF file={file.file} />,
-        "fbx": <FBX file={file.file} />
+        "glb": <GLTF file={file} />,
+        "fbx": <FBX file={file} />
       }[file.extension]}
     </div>
   )
