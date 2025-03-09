@@ -10,13 +10,15 @@ import charger from './images/charger.png'
 import girlModel from '../../assets/girl.fbx'
 import girl from './images/girl.png'
 
+import dna from '../../assets/dna.svg'
+
+const fileSupported = ["glb", "gltf", "fbx", "svg"]
 const FileUpload = ({ fileData }) => {
     const sendBack = (file) => {
-        let isValid = true
         const fileInfo = file.name
         const name = fileInfo.split(".").slice(0, -1).join(".")
         const extension = fileInfo.split(".").pop()
-        isValid ? fileData({ file, name, extension }) : toast.error("Not a valid file.")
+        fileSupported.includes(extension) ? fileData({ file, name, extension }) : toast.error("Not a valid file.")
     }
 
     const byChoose = (e) => {
@@ -26,6 +28,17 @@ const FileUpload = ({ fileData }) => {
     const byDrop = (e) => {
         e.preventDefault();
         sendBack(e.dataTransfer.files[0])
+    }
+
+    const simulateFileUpload = async () => {
+        try {
+            const response = await fetch(dna);
+            const blob = await response.blob(); // Convert response to Blob
+            const file = new File([blob], "sample.svg", { type: "image/svg+xml" });
+            fileData({ file, name: "sample", extension: "svg" });
+        } catch (error) {
+            console.error("Error fetching SVG file:", error);
+        }
     }
 
     const handleDefaultPick = (e) => {
@@ -39,6 +52,9 @@ const FileUpload = ({ fileData }) => {
                 break;
             case "girl":
                 fileData({ file: girlModel, name: e.target.getAttribute("name"), extension: "fbx" })
+                break;
+            case "dna":
+                simulateFileUpload();
                 break;
             default:
                 toast.error("Having issue in this File, Choose Other...")
@@ -56,11 +72,11 @@ const FileUpload = ({ fileData }) => {
             <p className=' p-2 px-6 border-2 border-gray-400 rounded-md'>Browse computer</p>
             <input type='file'
                 title="Choose file"
+                accept={`.${fileSupported.join(",.")}`}
                 className='absolute left-0 top-0 w-full h-full opacity-0 cursor-pointer'
-                // accept='.vtk'
                 onChange={byChoose}
                 onDrop={byDrop} />
-            <h4 className='pt-4 text-sm font-semibold text-gray-700'>* You can upload GLB, GLTF, FBX</h4>
+            <h4 className='pt-4 text-sm font-semibold text-gray-700'>* You can upload GLB, GLTF, FBX and SVG</h4>
 
             <div className=' absolute -bottom-40 w-96 bg-white bg-opacity-70 rounded-lg select-none p-3'>
                 <p className=' text-sm text-center mb-3'>Demo Models</p>
@@ -76,6 +92,10 @@ const FileUpload = ({ fileData }) => {
                     <div onClick={handleDefaultPick} name="girl" className=' relative h-20 w-20 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>FBX</p>
                         <img src={girl} alt="girl" className=' pointer-events-none' />
+                    </div>
+                    <div onClick={handleDefaultPick} name="dna" className=' relative h-20 w-20 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>SVG</p>
+                        <img src={dna} alt="girl" className=' pointer-events-none' />
                     </div>
                 </div>
             </div>

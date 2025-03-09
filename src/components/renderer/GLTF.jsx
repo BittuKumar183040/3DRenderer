@@ -6,6 +6,7 @@ import * as THREE from "three";
 import TopPanel from '../simulation/TopPanel';
 import AboutMesh from '../simulation/AboutMesh';
 import StatusBar from '../simulation/StatusBar';
+import Gizmo from '../simulation/Gizmo';
 
 const getGlbObj = (file) => {
   const gltf = useGLTF(file);
@@ -84,12 +85,7 @@ const GLTF = ({ file: { file, name, extension } }) => {
             {fileUrl && <Model fileUrl={fileUrl} setMeshItems={setMeshItems} />}
           </Suspense>
         </Bounds>
-        <GizmoHelper
-          alignment="bottom-left"
-          margin={[80, 80]}
-        >
-          <GizmoViewport axisColors={['red', 'green', 'black']} labelColor="white" />
-        </GizmoHelper>
+        <Gizmo />
       </Canvas>
       <Loader />
       {meshItems && <>

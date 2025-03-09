@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { HiBars3BottomRight, HiBars3 } from "react-icons/hi2";
 
 const AboutMesh = ({ meshItems, fileInfo: { name, extension } }) => {
+  let meshes = null;
+  if (meshItems) {
+    meshes = meshItems.length ? meshItems : meshItems.children
+  }
   const [toggle, setToggle] = useState(false);
 
   useEffect(() => {
@@ -21,7 +25,7 @@ const AboutMesh = ({ meshItems, fileInfo: { name, extension } }) => {
         <div className=' flex flex-col w-40 text-sm gap-1 rounded-md p-1 shadow-inner '>
           <p className=' text-sm overflow-hidden whitespace-nowrap border-b-2 border-gray-200 ' title={`${name}.${extension}`}>{name.split(".").pop()}</p>
           <div className=' h-24 overflow-y-scroll pl-2 text-xs flex flex-col gap-1'>
-            <p>Mesh : {meshItems.children.length}</p>
+            {meshes && <p>Mesh : {meshes.length}</p>}
 
           </div>
         </div>

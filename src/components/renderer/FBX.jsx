@@ -5,6 +5,7 @@ import { Bounds, GizmoHelper, GizmoViewport, Grid, OrbitControls, PerspectiveCam
 import * as THREE from "three";
 import TopPanel from '../simulation/TopPanel';
 import AboutMesh from '../simulation/AboutMesh';
+import Gizmo from '../simulation/Gizmo';
 
 const getFbxObj = (file) => {
   const fbx = useFBX(file);
@@ -99,18 +100,12 @@ const FBX = ({ file: { file, name, extension } }) => {
           }}>
 
             <ambientLight intensity={light} />
-            {/* <Environment preset='lobby' background backgroundBlurriness={0.3} /> */}
             <PerspectiveCamera makeDefault={true} position={[0, 100, 250]} fov={75} />
             <OrbitControls />
             <Bounds fit margin={2} observe>
               <Model fileUrl={fileUrl} setMeshItems={setMeshItems} />
             </Bounds>
-            <GizmoHelper
-              alignment="bottom-left"
-              margin={[80, 80]}
-            >
-              <GizmoViewport axisColors={['red', 'green', 'black']} labelColor="white" />
-            </GizmoHelper>
+            <Gizmo />
             <Grid cellSize={12} scale={100} />
           </Canvas>
           {meshItems && <>
