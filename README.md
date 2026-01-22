@@ -56,6 +56,7 @@ The application will be available at `http://localhost:3000`.
 |   │     └── GLTF.jsx
 |   │     └── FBX.jsx
 |   │     └── FBX.jsx
+|   │     └── VTK.jsx
 |   │     ...
 |   │  ├── simulation/
 │   ├── App.css          
