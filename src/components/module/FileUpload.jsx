@@ -44,20 +44,19 @@ const FileUpload = ({ fileData }) => {
         }
     }
 
-    const handleDefaultPick = (e) => {
-        console.log(e.target.getAttribute("name"))
-        switch (e.target.getAttribute("name")) {
+    const handleDefaultPick = (type) => {
+        switch (type) {
             case "frame":
-                fileData({ file: frameModel, name: e.target.getAttribute("name"), extension: "glb" })
+                fileData({ file: frameModel, name: type, extension: "glb" })
                 break;
             case "charger":
-                fileData({ file: chargerModel, name: e.target.getAttribute("name"), extension: "glb" })
+                fileData({ file: chargerModel, name: type, extension: "glb" })
                 break;
             case "girl":
-                fileData({ file: girlModel, name: e.target.getAttribute("name"), extension: "fbx" })
+                fileData({ file: girlModel, name: type, extension: "fbx" })
                 break;
             case "break":
-                fileData({ file: cell, name: e.target.getAttribute("name"), extension: "vtk" })
+                fileData({ file: cell, name: type, extension: "vtk" })
                 break;
             case "dna":
                 simulateFileUpload();
@@ -87,31 +86,31 @@ const FileUpload = ({ fileData }) => {
             <div className=' absolute -bottom-64 w-fit shadow-inner bg-white bg-opacity-70 rounded-lg select-none p-3'>
                 <p className=' text-sm text-center mb-3'>Demo Models</p>
                 <div className=' flex gap-4 justify-between'>
-                    <div onClick={handleDefaultPick} name="frame" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
+                    <button onClick={() => handleDefaultPick("frame")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
+                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider'>GLB</p>
+                        <div className=' rounded-2xl overflow-hidden border-2 shadow-lg hover:shadow-sm transition-all'>
+                            <img src={frame} alt="frame"/>
+                        </div>
+                    </button>
+                    <div onClick={() => handleDefaultPick("charger")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>GLB</p>
                         <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={frame} alt="frame" className=' pointer-events-none' />
+                            <img src={charger} alt="charger"/>
                         </div>
                     </div>
-                    <div onClick={handleDefaultPick} name="charger" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
-                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>GLB</p>
-                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={charger} alt="charger" className=' pointer-events-none' />
-                        </div>
-                    </div>
-                    <div onClick={handleDefaultPick} name="girl" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={() => handleDefaultPick("girl")} name className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>FBX</p>
                         <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={girl} alt="girl" className=' pointer-events-none' />
+                            <img src={girl} alt="girl"/>
                         </div>
                     </div>
-                    <div onClick={handleDefaultPick} name="dna" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={() => handleDefaultPick("dna")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>SVG</p>
                         <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={dna} alt="girl" className=' pointer-events-none' />
+                            <img src={dna} alt="girl"/>
                         </div>
                     </div>
-                    <div onClick={handleDefaultPick} name="break" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={() => handleDefaultPick("break")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>VTK</p>
                         <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
                             <img src={breakPaddle} alt="breakPaddle" className=' object-cover pointer-events-none' />
