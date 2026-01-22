@@ -45,7 +45,7 @@ const FileUpload = ({ fileData }) => {
     }
 
     const handleDefaultPick = (e) => {
-
+        console.log(e.target.getAttribute("name"))
         switch (e.target.getAttribute("name")) {
             case "frame":
                 fileData({ file: frameModel, name: e.target.getAttribute("name"), extension: "glb" })
@@ -84,28 +84,38 @@ const FileUpload = ({ fileData }) => {
                 onDrop={byDrop} />
             <h4 className='pt-4 text-sm font-semibold text-gray-700'>* You can upload GLB, GLTF, FBX, SVG and VTK</h4>
 
-            <div className=' absolute -bottom-64 w-fit bg-white bg-opacity-70 rounded-lg select-none p-3'>
+            <div className=' absolute -bottom-64 w-fit shadow-inner bg-white bg-opacity-70 rounded-lg select-none p-3'>
                 <p className=' text-sm text-center mb-3'>Demo Models</p>
                 <div className=' flex gap-4 justify-between'>
-                    <div onClick={handleDefaultPick} name="frame" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="frame" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>GLB</p>
-                        <img src={frame} alt="frame" className=' pointer-events-none' />
+                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
+                            <img src={frame} alt="frame" className=' pointer-events-none' />
+                        </div>
                     </div>
-                    <div onClick={handleDefaultPick} name="charger" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="charger" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>GLB</p>
-                        <img src={charger} alt="charger" className=' pointer-events-none' />
+                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
+                            <img src={charger} alt="charger" className=' pointer-events-none' />
+                        </div>
                     </div>
-                    <div onClick={handleDefaultPick} name="girl" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="girl" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>FBX</p>
-                        <img src={girl} alt="girl" className=' pointer-events-none' />
+                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
+                            <img src={girl} alt="girl" className=' pointer-events-none' />
+                        </div>
                     </div>
-                    <div onClick={handleDefaultPick} name="dna" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="dna" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>SVG</p>
-                        <img src={dna} alt="girl" className=' pointer-events-none' />
+                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
+                            <img src={dna} alt="girl" className=' pointer-events-none' />
+                        </div>
                     </div>
-                    <div onClick={handleDefaultPick} name="break" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="break" className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>VTK</p>
-                        <img src={breakPaddle} alt="breakPaddle" className=' object-cover pointer-events-none' />
+                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
+                            <img src={breakPaddle} alt="breakPaddle" className=' object-cover pointer-events-none' />
+                        </div>
                     </div>
                 </div>
             </div>
