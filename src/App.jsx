@@ -4,6 +4,7 @@ import FileUpload from './components/module/FileUpload';
 import GLTF from './components/renderer/GLTF';
 import FBX from './components/renderer/FBX';
 import SVG from './components/renderer/SVG';
+import VTK from './components/renderer/VTK/VTK';
 
 function App() {
   const [file, setFile] = useState({ name: "", extension: "" })
@@ -16,6 +17,7 @@ function App() {
         "glb": <GLTF file={file} />,
         "fbx": <FBX file={file} />,
         "svg": <SVG file={file} />,
+        "vtk": <VTK file={file} />,
       }[file.extension]}
     </div>
   )

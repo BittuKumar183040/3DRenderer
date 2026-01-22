@@ -12,7 +12,10 @@ import girl from './images/girl.png'
 
 import dna from '../../assets/dna.svg'
 
-const fileSupported = ["glb", "gltf", "fbx", "svg"]
+import cell from '../../assets/vtkSampleFiles/breakPaddle.vtk?raw'
+import breakPaddle from './images/breakPaddlevtk.png'
+
+const fileSupported = ["glb", "gltf", "fbx", "svg", "vtk"]
 const FileUpload = ({ fileData }) => {
     const sendBack = (file) => {
         const fileInfo = file.name
@@ -53,6 +56,9 @@ const FileUpload = ({ fileData }) => {
             case "girl":
                 fileData({ file: girlModel, name: e.target.getAttribute("name"), extension: "fbx" })
                 break;
+            case "break":
+                fileData({ file: cell, name: e.target.getAttribute("name"), extension: "vtk" })
+                break;
             case "dna":
                 simulateFileUpload();
                 break;
@@ -76,26 +82,30 @@ const FileUpload = ({ fileData }) => {
                 className='absolute left-0 top-0 w-full h-full opacity-0 cursor-pointer'
                 onChange={byChoose}
                 onDrop={byDrop} />
-            <h4 className='pt-4 text-sm font-semibold text-gray-700'>* You can upload GLB, GLTF, FBX and SVG</h4>
+            <h4 className='pt-4 text-sm font-semibold text-gray-700'>* You can upload GLB, GLTF, FBX, SVG and VTK</h4>
 
-            <div className=' absolute -bottom-40 w-96 bg-white bg-opacity-70 rounded-lg select-none p-3'>
+            <div className=' absolute -bottom-64 w-fit bg-white bg-opacity-70 rounded-lg select-none p-3'>
                 <p className=' text-sm text-center mb-3'>Demo Models</p>
-                <div className=' flex justify-between'>
-                    <div onClick={handleDefaultPick} name="frame" className=' relative h-20 w-20 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                <div className=' flex gap-4 justify-between'>
+                    <div onClick={handleDefaultPick} name="frame" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>GLB</p>
                         <img src={frame} alt="frame" className=' pointer-events-none' />
                     </div>
-                    <div onClick={handleDefaultPick} name="charger" className=' relative h-20 w-20 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="charger" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>GLB</p>
                         <img src={charger} alt="charger" className=' pointer-events-none' />
                     </div>
-                    <div onClick={handleDefaultPick} name="girl" className=' relative h-20 w-20 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="girl" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>FBX</p>
                         <img src={girl} alt="girl" className=' pointer-events-none' />
                     </div>
-                    <div onClick={handleDefaultPick} name="dna" className=' relative h-20 w-20 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                    <div onClick={handleDefaultPick} name="dna" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
                         <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>SVG</p>
                         <img src={dna} alt="girl" className=' pointer-events-none' />
+                    </div>
+                    <div onClick={handleDefaultPick} name="break" className=' relative size-40 shrink-0 bg-slate-200 rounded-md cursor-pointer active:scale-90 transition-transform'>
+                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>VTK</p>
+                        <img src={breakPaddle} alt="breakPaddle" className=' object-cover pointer-events-none' />
                     </div>
                 </div>
             </div>
