@@ -13,7 +13,7 @@ import girl from './images/girl.png'
 import dna from '../../assets/dna.svg'
 
 import cell from '../../assets/vtkSampleFiles/breakPaddle.vtk?raw'
-import breakPaddle from './images/breakPaddlevtk.png'
+import breakPaddle from './images/breakpaddlevtk.png'
 
 const fileSupported = ["glb", "gltf", "fbx", "svg", "vtk"]
 const FileUpload = ({ fileData }) => {
