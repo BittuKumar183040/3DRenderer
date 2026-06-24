@@ -11,6 +11,7 @@ import girl from "./images/girl.png";
 import dna from "../../assets/dna.svg";
 import cell from "../../assets/vtkSampleFiles/breakPaddle.vtk?raw";
 import breakPaddle from "./images/breakpaddlevtk.png";
+import customShaderImg from "./images/customShader.jpg";
 
 const fileSupported = ["glb", "gltf", "fbx", "svg", "vtk"];
 
@@ -20,6 +21,7 @@ const DEMO_MODELS = [
   { key: "girl", label: "Girl", ext: "FBX", img: girl, alt: "Girl model" },
   { key: "dna", label: "DNA", ext: "SVG", img: dna, alt: "DNA molecule" },
   { key: "break", label: "Break paddle", ext: "VTK", img: breakPaddle, alt: "Break paddle" },
+  { key: "custom", label: "Custom Shaders", ext: "custom", img: customShaderImg, alt: "Custom Shader" },
 ];
 
 const FileUpload = ({ fileData }) => {
@@ -60,11 +62,9 @@ const FileUpload = ({ fileData }) => {
       girl: () => fileData({ file: girlModel, name: "girl", extension: "fbx" }),
       break: () => fileData({ file: cell, name: "break", extension: "vtk" }),
       dna: simulateFileUpload,
+      custom: () => fileData({ file: null, name: "custom", extension: "custom" }),
     };
-    (
-      map[key] ??
-      (() => toast.error("Having an issue with this file, choose another."))
-    )();
+    ( map[key] ?? (() => toast.error("Having an issue with this file, choose another.")))();
   };
 
   return (
