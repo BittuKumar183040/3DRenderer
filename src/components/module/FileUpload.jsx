@@ -1,126 +1,139 @@
-import { toast, ToastContainer } from 'react-toastify'
+import { toast, ToastContainer } from "react-toastify";
 import { PiVectorThreeDuotone } from "react-icons/pi";
+import { TbUpload } from "react-icons/tb";
 
-import frameModel from '../../assets/frame.glb'
-import frame from './images/frame.png'
+import frameModel from "../../assets/frame.glb";
+import frame from "./images/frame.png";
+import chargerModel from "../../assets/charger.glb";
+import charger from "./images/charger.png";
+import girlModel from "../../assets/girl.fbx";
+import girl from "./images/girl.png";
+import dna from "../../assets/dna.svg";
+import cell from "../../assets/vtkSampleFiles/breakPaddle.vtk?raw";
+import breakPaddle from "./images/breakpaddlevtk.png";
 
-import chargerModel from '../../assets/charger.glb'
-import charger from './images/charger.png'
+const fileSupported = ["glb", "gltf", "fbx", "svg", "vtk"];
 
-import girlModel from '../../assets/girl.fbx'
-import girl from './images/girl.png'
+const DEMO_MODELS = [
+  { key: "frame", label: "Frame", ext: "GLB", img: frame, alt: "Frame model" },
+  { key: "charger", label: "Charger", ext: "GLB", img: charger, alt: "Charger model" },
+  { key: "girl", label: "Girl", ext: "FBX", img: girl, alt: "Girl model" },
+  { key: "dna", label: "DNA", ext: "SVG", img: dna, alt: "DNA molecule" },
+  { key: "break", label: "Break paddle", ext: "VTK", img: breakPaddle, alt: "Break paddle" },
+];
 
-import dna from '../../assets/dna.svg'
-
-import cell from '../../assets/vtkSampleFiles/breakPaddle.vtk?raw'
-import breakPaddle from './images/breakpaddlevtk.png'
-
-const fileSupported = ["glb", "gltf", "fbx", "svg", "vtk"]
 const FileUpload = ({ fileData }) => {
-    const sendBack = (file) => {
-        const fileInfo = file.name
-        const name = fileInfo.split(".").slice(0, -1).join(".")
-        const extension = fileInfo.split(".").pop()
-        fileSupported.includes(extension) ? fileData({ file, name, extension }) : toast.error("Not a valid file.")
-    }
+  const sendBack = (file) => {
+    const name = file.name.split(".").slice(0, -1).join(".");
+    const extension = file.name.split(".").pop();
+    fileSupported.includes(extension)
+      ? fileData({ file, name, extension })
+      : toast.error("Not a valid file.");
+  };
 
-    const byChoose = (e) => {
-        e.preventDefault();
-        sendBack(e.target.files[0])
-    }
-    const byDrop = (e) => {
-        e.preventDefault();
-        sendBack(e.dataTransfer.files[0])
-    }
+  const byChoose = (e) => {
+    e.preventDefault();
+    sendBack(e.target.files[0]);
+  };
+  const byDrop = (e) => {
+    e.preventDefault();
+    sendBack(e.dataTransfer.files[0]);
+  };
 
-    const simulateFileUpload = async () => {
-        try {
-            const response = await fetch(dna);
-            const blob = await response.blob(); // Convert response to Blob
-            const file = new File([blob], "sample.svg", { type: "image/svg+xml" });
-            fileData({ file, name: "sample", extension: "svg" });
-        } catch (error) {
-            console.error("Error fetching SVG file:", error);
-        }
+  const simulateFileUpload = async () => {
+    try {
+      const response = await fetch(dna);
+      const blob = await response.blob();
+      const file = new File([blob], "sample.svg", { type: "image/svg+xml" });
+      fileData({ file, name: "sample", extension: "svg" });
+    } catch {
+      toast.error("Error loading DNA file.");
     }
+  };
 
-    const handleDefaultPick = (type) => {
-        switch (type) {
-            case "frame":
-                fileData({ file: frameModel, name: type, extension: "glb" })
-                break;
-            case "charger":
-                fileData({ file: chargerModel, name: type, extension: "glb" })
-                break;
-            case "girl":
-                fileData({ file: girlModel, name: type, extension: "fbx" })
-                break;
-            case "break":
-                fileData({ file: cell, name: type, extension: "vtk" })
-                break;
-            case "dna":
-                simulateFileUpload();
-                break;
-            default:
-                toast.error("Having issue in this File, Choose Other...")
-        }
-    }
+  const handleDefaultPick = (key) => {
+    const map = {
+      frame: () =>
+        fileData({ file: frameModel, name: "frame", extension: "glb" }),
+      charger: () =>
+        fileData({ file: chargerModel, name: "charger", extension: "glb" }),
+      girl: () => fileData({ file: girlModel, name: "girl", extension: "fbx" }),
+      break: () => fileData({ file: cell, name: "break", extension: "vtk" }),
+      dna: simulateFileUpload,
+    };
+    (
+      map[key] ??
+      (() => toast.error("Having an issue with this file, choose another."))
+    )();
+  };
 
-    return (<>
-        <ToastContainer />
-        <div
-            className='absolute md:w-1/2 w-5/6 max-w-[600px] top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-800
-                bg-white rounded-lg shadow-2xl p-4 flex flex-col gap-4 justify-center items-center'
-        >
-            <PiVectorThreeDuotone size={80} className=' opacity-50 ' />
-            <p className=' text-sm tracking-wide'>Please upload the 3d file to visualize.</p>
-            <p className=' p-2 px-6 border-2 border-gray-400 rounded-md'>Browse computer</p>
-            <input type='file'
-                title="Choose file"
-                accept={`.${fileSupported.join(",.")}`}
-                className='absolute left-0 top-0 w-full h-full opacity-0 cursor-pointer'
-                onChange={byChoose}
-                onDrop={byDrop} />
-            <h4 className='pt-4 text-sm font-semibold text-gray-700'>* You can upload GLB, GLTF, FBX, SVG and VTK</h4>
+  return (
+    <>
+      <ToastContainer />
 
-            <div className=' absolute -bottom-64 w-fit shadow-inner bg-white bg-opacity-70 rounded-lg select-none p-3'>
-                <p className=' text-sm text-center mb-3'>Demo Models</p>
-                <div className=' flex gap-4 justify-between'>
-                    <button onClick={() => handleDefaultPick("frame")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
-                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider'>GLB</p>
-                        <div className=' rounded-2xl overflow-hidden border-2 shadow-lg hover:shadow-sm transition-all'>
-                            <img src={frame} alt="frame"/>
-                        </div>
-                    </button>
-                    <div onClick={() => handleDefaultPick("charger")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
-                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>GLB</p>
-                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={charger} alt="charger"/>
-                        </div>
-                    </div>
-                    <div onClick={() => handleDefaultPick("girl")} name className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
-                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>FBX</p>
-                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={girl} alt="girl"/>
-                        </div>
-                    </div>
-                    <div onClick={() => handleDefaultPick("dna")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
-                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>SVG</p>
-                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={dna} alt="girl"/>
-                        </div>
-                    </div>
-                    <div onClick={() => handleDefaultPick("break")} className=' relative size-40 shrink-0 cursor-pointer active:scale-90 transition-transform'>
-                        <p className=' absolute -top-1 -left-1 bg-red-300 px-2 shadow-md rounded-md text-white text-sm tracking-wider pointer-events-none '>VTK</p>
-                        <div className=' rounded-2xl overflow-hidden shadow-lg hover:shadow-sm transition-all pointer-events-none'>
-                            <img src={breakPaddle} alt="breakPaddle" className=' object-cover pointer-events-none' />
-                        </div>
-                    </div>
-                </div>
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="w-full max-w-3xl animate-fade-slide-up">
+          <div
+            className="relative rounded-2xl border-2 border-dashed border-gray-300 bg-white p-8 flex flex-col items-center gap-3 text-center transition-colors hover:border-gray-400 overflow-hidden group"
+            onDrop={byDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <div className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+            <PiVectorThreeDuotone size={64} className="text-gray-400 animate-pulse opacity-60" />
+
+            <p className="text-base text-gray-700 font-medium">
+              Drop your 3D file here
+            </p>
+            <p className="text-sm text-gray-400">
+              GLB · GLTF · FBX · SVG · VTK
+            </p>
+
+            <button className="mt-1 flex items-center gap-2 px-5 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors">
+              <TbUpload size={16} />
+              Browse computer
+            </button>
+
+            <input
+              type="file"
+              accept={`.${fileSupported.join(",.")}`}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={byChoose}
+            />
+          </div>
+
+          <div className="mt-6">
+            <p className="text-xs text-gray-400 text-center mb-3 tracking-wide uppercase">
+              Demo models
+            </p>
+
+            <div className="flex gap-3 justify-center flex-wrap">
+              {DEMO_MODELS.map(({ key, label, ext, img, alt }, i) => (
+                <button
+                  key={key}
+                  onClick={() => handleDefaultPick(key)}
+                  className="relative w-32 shrink-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-200 bg-white group"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  <span className="absolute -top-1.5 -left-1.5 z-10 text-xs font-medium bg-red-300 text-red-900 px-1.5 py-0.5 rounded">
+                    {ext}
+                  </span>
+                  <img
+                    src={img}
+                    alt={alt}
+                    className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="py-1.5 text-center text-xs text-gray-500 bg-white rounded-lg">
+                    {label}
+                  </div>
+                </button>
+              ))}
             </div>
+          </div>
         </div>
+      </div>
     </>
-    )
-}
+  );
+};
 
-export default FileUpload
+export default FileUpload;

@@ -1,5 +1,5 @@
-import React, {useRef, useEffect, useState, useMemo} from 'react'
-import { Box3, Group , Points, MeshStandardMaterial, ShaderMaterial, BufferGeometry, MeshDepthMaterial, PointsMaterial,DoubleSide, Color, Mesh, Float32BufferAttribute, MeshBasicMaterial, Vector3, FrontSide, BackSide} from 'three';
+import React, {useRef, useEffect, useMemo} from 'react'
+import { Box3, Group , Points, MeshStandardMaterial, BufferGeometry, PointsMaterial,DoubleSide, Color, Mesh, Float32BufferAttribute, MeshBasicMaterial, Vector3, FrontSide, BackSide} from 'three';
 import { extend ,useThree } from '@react-three/fiber';
 
 extend({ MeshBasicMaterial  });
