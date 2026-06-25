@@ -1,32 +1,42 @@
-import { useMemo } from "react";
+import { useEffect, useRef, memo, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
-import { fragmentShader } from "../customShader/fragment";
-import { vertexShader } from "../customShader/vertex";
 
-const ShaderSphere = () => {
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        vertexShader,
-        fragmentShader,
-        uniforms: {
-          uTime: { value: 0.0 },
-        },
-      }),
-    []
-  );
+const ShaderSphere = ({ vertexShader, fragmentShader }) => {
+  const material = useRef();
 
   useFrame(({ clock }) => {
-    material.uniforms.uTime.value = clock.elapsedTime;
+    if (material.current) {
+      material.current.uniforms.uTime.value = clock.elapsedTime;
+    }
   });
+
+  useEffect(() => {
+    if (!material.current) return;
+
+    material.current.vertexShader = vertexShader;
+    material.current.fragmentShader = fragmentShader;
+    material.current.needsUpdate = true;
+  }, [vertexShader, fragmentShader]);
+
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+    }),
+    [],
+  );
 
   return (
     <mesh>
       <sphereGeometry args={[50, 128, 128]} />
-      <primitive object={material} attach="material" />
+
+      <shaderMaterial
+        ref={material}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={uniforms}
+      />
     </mesh>
   );
 };
 
-export default ShaderSphere;
+export default memo(ShaderSphere);

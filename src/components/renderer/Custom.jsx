@@ -6,56 +6,103 @@ import {
   OrbitControls,
   PerspectiveCamera,
 } from "@react-three/drei";
-import TopPanel from "../simulation/TopPanel";
-import Gizmo from "../simulation/Gizmo";
-import AboutMesh from "../simulation/AboutMesh";
 import ShaderSphere from "./mesh/ShaderSphere";
+import { fragmentShader as defaultFragment } from "./customShader/fragment";
+import { vertexShader as defaultVertex } from "./customShader/vertex";
 
 const initial = {
   light: 2,
 };
+
 const Custom = () => {
-  const [light, setLight] = useState(initial.light);
-  const [resetKey, setResetKey] = useState(0);
-  const [randomColor, setRandomColor] = useState(0);
+  const [light] = useState(initial.light);
 
-  const fallback = (item) => {
-    let name = Object.keys(item)[0];
+  const [vertexEditor, setVertexEditor] = useState(defaultVertex);
+  const [fragmentEditor, setFragmentEditor] = useState(defaultFragment);
+  const [vertexShader, setVertexShader] = useState(defaultVertex);
+  const [fragmentShader, setFragmentShader] = useState(defaultFragment);
 
-    switch (name) {
-      case "random":
-        setRandomColor(randomColor + 1);
-        break;
+  const applyShader = () => {
+    setVertexShader(vertexEditor);
+    setFragmentShader(fragmentEditor);
+  };
 
-      case "ambient":
-        setLight(item.ambient.value);
-        break;
+  const resetShader = () => {
+    setVertexEditor(defaultVertex);
+    setFragmentEditor(defaultFragment);
 
-      case "reset":
-        setRandomColor(0);
-        setResetKey(resetKey + 1);
-        break;
-    }
+    setVertexShader(defaultVertex);
+    setFragmentShader(defaultFragment);
   };
 
   return (
-    <div className="relative h-dvh w-screen">
-      <Canvas key={resetKey}>
-        <ambientLight intensity={light} />
-        <directionalLight intensity={10} />
-        <PerspectiveCamera
-          makeDefault={true}
-          position={[0, 100, 250]}
-          fov={75}
-        />
+    <div className="flex h-dvh w-screen overflow-hidden bg-neutral-950">
 
-        <OrbitControls makeDefault />
-        <Bounds fit margin={2} observe>
-          <ShaderSphere />
-        </Bounds>
-        <Gizmo />
-        <Grid cellSize={12} scale={100} />
-      </Canvas>
+      <div className="flex-1">
+        <Canvas>
+          <ambientLight intensity={light} />
+          <directionalLight intensity={10} position={[5, 10, 5]} />
+
+          <PerspectiveCamera
+            makeDefault
+            position={[0, 100, 250]}
+            fov={75}
+          />
+
+          <OrbitControls makeDefault />
+
+          <Bounds fit observe margin={2}>
+            <ShaderSphere
+              vertexShader={vertexShader}
+              fragmentShader={fragmentShader}
+            />
+          </Bounds>
+
+          <Grid cellSize={12} scale={100} />
+        </Canvas>
+      </div>
+
+      <div className="w-[45%] bg-neutral-950 text-white flex flex-col border-l border-neutral-800">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-800">
+          <h2 className="text-lg font-semibold"> Shader Editor </h2>
+          <div className="flex gap-3">
+            <button onClick={applyShader} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium transition hover:bg-blue-500">
+              Apply
+            </button>
+
+            <button onClick={resetShader} className="rounded-md bg-neutral-700 px-4 py-2 text-sm font-medium transition hover:bg-neutral-600" >
+              Reset
+            </button>
+
+          </div>
+        </div>
+
+        <div className="flex flex-1 flex-col border-b border-neutral-800">
+          <div className="px-5 py-2 font-semibold text-neutral-300">
+            Vertex Shader
+          </div>
+
+          <textarea
+            spellCheck={false}
+            value={vertexEditor}
+            onChange={(e) => setVertexEditor(e.target.value)}
+            className="flex-1 resize-none bg-neutral-900 p-4 font-mono text-sm outline-none"
+          />
+        </div>
+        <div className="flex flex-1 flex-col">
+          <div className="px-5 py-2 font-semibold text-neutral-300">
+            Fragment Shader
+          </div>
+
+          <textarea
+            spellCheck={false}
+            value={fragmentEditor}
+            onChange={(e) => setFragmentEditor(e.target.value)}
+            className="flex-1 resize-none bg-neutral-900 p-4 font-mono text-sm outline-none"
+          />
+
+        </div>
+      </div>
     </div>
   );
 };
