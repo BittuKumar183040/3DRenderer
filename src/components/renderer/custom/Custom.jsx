@@ -72,13 +72,8 @@ const Custom = () => {
             <ButtonSecondary label={"Reset"} onClick={resetShader} />
           </div>
         </div>
-
-        <div className="flex flex-1 flex-col border-b border-neutral-800">
-          <TextArea label={"Vertex Shader"} value={vertexEditor} onChange={setVertexEditor} />
-        </div>
-        <div className="flex flex-1 flex-col">
-          <TextArea label={"Fragment Shader"} value={fragmentEditor} onChange={setFragmentEditor} />
-        </div>
+        <TextArea label={"Vertex Shader"} value={vertexEditor} onChange={setVertexEditor} />
+        <TextArea label={"Fragment Shader"} value={fragmentEditor} onChange={setFragmentEditor} />
       </div>
     </div>
   );
