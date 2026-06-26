@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import {
-  Bounds,
-  Grid,
-  OrbitControls,
-  PerspectiveCamera,
-} from "@react-three/drei";
+import { Bounds, Grid, OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import ShaderSphere from "./mesh/ShaderSphere";
 import { fragmentShader as defaultFragment } from "./shaders/fragment";
 import { vertexShader as defaultVertex } from "./shaders/vertex";
@@ -19,10 +14,10 @@ const initial = {
 const Custom = () => {
   const [light] = useState(initial.light);
 
-  const [vertexEditor, setVertexEditor] = useState(defaultVertex);
-  const [fragmentEditor, setFragmentEditor] = useState(defaultFragment);
-  const [vertexShader, setVertexShader] = useState(defaultVertex);
-  const [fragmentShader, setFragmentShader] = useState(defaultFragment);
+  const [vertexEditor, setVertexEditor] = useState(defaultVertex[0]);
+  const [fragmentEditor, setFragmentEditor] = useState(defaultFragment[0]);
+  const [vertexShader, setVertexShader] = useState(defaultVertex[0]);
+  const [fragmentShader, setFragmentShader] = useState(defaultFragment[0]);
 
   const applyShader = () => {
     setVertexShader(vertexEditor);
@@ -30,11 +25,11 @@ const Custom = () => {
   };
 
   const resetShader = () => {
-    setVertexEditor(defaultVertex);
-    setFragmentEditor(defaultFragment);
+    setVertexEditor(defaultVertex[0]);
+    setFragmentEditor(defaultFragment[0]);
 
-    setVertexShader(defaultVertex);
-    setFragmentShader(defaultFragment);
+    setVertexShader(defaultVertex[0]);
+    setFragmentShader(defaultFragment[0]);
   };
 
   return (

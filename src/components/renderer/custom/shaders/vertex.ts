@@ -1,4 +1,4 @@
-export const vertexShader = `
+export const vertexShader = [`
 uniform float uTime;
 
 varying vec2 vUv;
@@ -22,4 +22,4 @@ void main() {
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }
-`;
+`];

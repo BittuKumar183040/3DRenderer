@@ -1,4 +1,5 @@
-export const fragmentShader = `
+export const fragmentShader = [
+  `
 uniform float uTime;
 
 varying vec2 vUv;
@@ -32,4 +33,30 @@ void main() {
 
     gl_FragColor = vec4(color,1.0);
 }
-`;
+`,
+`
+uniform vec2 uResolution;
+uniform vec2 uMouse;
+uniform float uTime;
+uniform float uFrame;
+
+uniform sampler2D uTexture;
+
+varying vec2 vUv;
+
+mat2 rotate(float angle) {
+    return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+}
+
+void main() {
+    float cutsSize = 150.0 * (1.1 - uMouse.x / uResolution.x);
+    float angle = 0.4 * uTime;
+    vec2 offset = 30.0 * sin(angle) * vec2(cos(angle), sin(angle));
+
+    vec2 rotatedPos = rotate(angle) * (gl_FragCoord.xy - 0.5 * uResolution) + 0.5 * uResolution;
+    offset *= 2.0 * floor(mod(rotatedPos.y / cutsSize, 2.0)) - 1.0;
+
+    gl_FragColor = texture2D(uTexture, vUv + offset / uResolution);
+}
+`,
+];
