@@ -5,7 +5,7 @@ import GLTF from './components/renderer/GLTF';
 import FBX from './components/renderer/FBX';
 import SVG from './components/renderer/SVG';
 import VTK from './components/renderer/VTK/VTK';
-import Custom from './components/renderer/Custom';
+import Custom from './components/renderer/custom/Custom';
 
 function App() {
   const [file, setFile] = useState({ name: "", extension: "" })

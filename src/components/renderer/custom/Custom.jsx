@@ -7,8 +7,10 @@ import {
   PerspectiveCamera,
 } from "@react-three/drei";
 import ShaderSphere from "./mesh/ShaderSphere";
-import { fragmentShader as defaultFragment } from "./customShader/fragment";
-import { vertexShader as defaultVertex } from "./customShader/vertex";
+import { fragmentShader as defaultFragment } from "./shaders/fragment";
+import { vertexShader as defaultVertex } from "./shaders/vertex";
+import TextArea from "./ui/TextArea";
+import { ButtonPrimary, ButtonSecondary } from "./ui/Buttons";
 
 const initial = {
   light: 2,
@@ -36,7 +38,7 @@ const Custom = () => {
   };
 
   return (
-    <div className="flex h-dvh w-screen overflow-hidden bg-neutral-950">
+    <div className="flex md:flex-row flex-col h-dvh w-screen overflow-hidden bg-neutral-950">
 
       <div className="flex-1">
         <Canvas>
@@ -62,45 +64,20 @@ const Custom = () => {
         </Canvas>
       </div>
 
-      <div className="w-[45%] bg-neutral-950 text-white flex flex-col border-l border-neutral-800">
+      <div className=" bg-neutral-950 md:w-[45%] w-full md:h-full h-1/2 text-white flex flex-col border-l border-neutral-800">
         <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-800">
           <h2 className="text-lg font-semibold"> Shader Editor </h2>
           <div className="flex gap-3">
-            <button onClick={applyShader} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium transition hover:bg-blue-500">
-              Apply
-            </button>
-
-            <button onClick={resetShader} className="rounded-md bg-neutral-700 px-4 py-2 text-sm font-medium transition hover:bg-neutral-600" >
-              Reset
-            </button>
-
+            <ButtonPrimary label={"Apply"} onClick={applyShader} />
+            <ButtonSecondary label={"Reset"} onClick={resetShader} />
           </div>
         </div>
 
         <div className="flex flex-1 flex-col border-b border-neutral-800">
-          <div className="px-5 py-2 font-semibold text-neutral-300">
-            Vertex Shader
-          </div>
-
-          <textarea
-            spellCheck={false}
-            value={vertexEditor}
-            onChange={(e) => setVertexEditor(e.target.value)}
-            className="flex-1 resize-none bg-neutral-900 p-4 font-mono text-sm outline-none"
-          />
+          <TextArea label={"Vertex Shader"} value={vertexEditor} onChange={setVertexEditor} />
         </div>
         <div className="flex flex-1 flex-col">
-          <div className="px-5 py-2 font-semibold text-neutral-300">
-            Fragment Shader
-          </div>
-
-          <textarea
-            spellCheck={false}
-            value={fragmentEditor}
-            onChange={(e) => setFragmentEditor(e.target.value)}
-            className="flex-1 resize-none bg-neutral-900 p-4 font-mono text-sm outline-none"
-          />
-
+          <TextArea label={"Fragment Shader"} value={fragmentEditor} onChange={setFragmentEditor} />
         </div>
       </div>
     </div>
