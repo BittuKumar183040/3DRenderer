@@ -7,6 +7,7 @@ import Gizmo from "../simulation/Gizmo";
 import SelectionInspector from "../simulation/SelectionInspector";
 import SceneGraphSidebar from "../simulation/SceneGraphSidebar";
 import SelectionOutline from "../simulation/SelectionOutline";
+import ModelLoadingOverlay from "../simulation/ModelLoadingOverlay";
 import SceneGraphCapture from "../simulation/SceneGraphCapture";
 
 
@@ -121,6 +122,7 @@ const SVG = ({ file: { file, name, extension } }) => {
   return (
     <div className='renderer-workspace relative h-dvh w-screen'>
       {fileUrl ? <Canvas key={resetKey} onPointerMissed={() => setSelectedObject(null)}>
+        <color attach="background" args={["#e9ebf1"]} />
         <ambientLight intensity={light} />
         <PerspectiveCamera makeDefault={true} position={[0, 100, 250]} fov={75} />
 
@@ -137,6 +139,7 @@ const SVG = ({ file: { file, name, extension } }) => {
       <TopPanel meshItems={meshItems} fallback={fallback} initial={initial} />
       <SelectionInspector object={selectedObject} root={meshItems} onSelect={setSelectedObject} onClose={() => setSelectedObject(null)} />
       <SceneGraphSidebar root={sceneRoot} selected={selectedObject} onSelect={setSelectedObject} title={name || 'SVG Scene'} />
+      <ModelLoadingOverlay name={name} />
     </div>
   );
 };

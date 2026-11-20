@@ -8,6 +8,7 @@ import Gizmo from '../simulation/Gizmo';
 import SelectionInspector from '../simulation/SelectionInspector';
 import SceneGraphSidebar from '../simulation/SceneGraphSidebar';
 import SelectionOutline from '../simulation/SelectionOutline';
+import ModelLoadingOverlay from '../simulation/ModelLoadingOverlay';
 import SceneGraphCapture from '../simulation/SceneGraphCapture';
 
 const getFbxObj = (file) => {
@@ -113,7 +114,7 @@ const FBX = ({ file: { file, name, extension } }) => {
             toneMapping: THREE.ACESFilmicToneMapping,
             outputEncoding: THREE.sRGBEncoding,
           }}>
-
+            <color attach="background" args={["#e9ebf1"]} />
             <ambientLight intensity={light} />
             <PerspectiveCamera makeDefault={true} position={[0, 100, 250]} fov={75} />
             <OrbitControls autoRotate={autoRotate} autoRotateSpeed={1.4} />
@@ -130,6 +131,7 @@ const FBX = ({ file: { file, name, extension } }) => {
             {/* <StatusBar meshItems={meshItems} /> */}
           </>
           }
+          <ModelLoadingOverlay name={name} />
           <SelectionInspector object={selectedObject} root={meshItems} onSelect={setSelectedObject} onClose={() => setSelectedObject(null)} />
           <SceneGraphSidebar root={sceneRoot} selected={selectedObject} onSelect={setSelectedObject} title={name || 'Scene'} />
         </>
