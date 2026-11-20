@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import { Canvas } from '@react-three/fiber';
-import { Bounds, GizmoHelper, GizmoViewport, Loader, OrbitControls, useGLTF } from '@react-three/drei'
+import { Bounds, GizmoHelper, GizmoViewport, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from "three";
 import TopPanel from '../simulation/TopPanel';
 import StatusBar from '../simulation/StatusBar';
@@ -9,6 +9,7 @@ import Gizmo from '../simulation/Gizmo';
 import SelectionInspector from '../simulation/SelectionInspector';
 import SceneGraphSidebar from '../simulation/SceneGraphSidebar';
 import SelectionOutline from '../simulation/SelectionOutline';
+import ModelLoadingOverlay from '../simulation/ModelLoadingOverlay';
 import SceneGraphCapture from '../simulation/SceneGraphCapture';
 
 const getGlbObj = (file) => {
@@ -91,6 +92,7 @@ const GLTF = ({ file: { file, name, extension } }) => {
     <div className='renderer-workspace h-dvh w-screen'>
       <ToastContainer autoClose={1800} pauseOnHover={false} />
       <Canvas onPointerMissed={() => setSelectedObject(null)}>
+        <color attach="background" args={["#e9ebf1"]} />
         <ambientLight intensity={light} />
         <directionalLight position={[-200, 300, 400]} intensity={light * 2} />
         <directionalLight position={[-200, -300, 400]} intensity={light * 4} />
@@ -104,7 +106,7 @@ const GLTF = ({ file: { file, name, extension } }) => {
         <SceneGraphCapture onScene={setSceneRoot} />
         <SelectionOutline object={selectedObject} />
       </Canvas>
-      <Loader />
+      <ModelLoadingOverlay name={name} />
       {meshItems && <>
         <TopPanel meshItems={meshItems} fallback={fallback} initial={initial} disable={["random"]} />
         {/* <StatusBar meshItems={meshItems} /> */}
