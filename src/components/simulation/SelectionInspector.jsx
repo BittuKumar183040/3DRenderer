@@ -93,11 +93,11 @@ export default function SelectionInspector({
           {["x", "y", "z"].map((axis) => (
             <label
               key={axis}
-              className="flex h-8 min-w-0 items-center overflow-hidden rounded-[5px] border border-[#e9e9ef]"
+              className="flex h-8 min-w-0 items-center overflow-hidden rounded-[5px] border border-white/60 bg-white/35 backdrop-blur-sm"
             >
               <small className="pl-[5px] text-[#a0a3ad]">{axis}</small>
               <input
-                className="h-[30px] w-full min-w-0 appearance-none border-0 p-[3px] text-[10px] text-[#424451] outline-none"
+                className="h-[30px] w-full min-w-0 appearance-none border-0 bg-transparent p-[3px] text-[10px] text-[#424451] outline-none"
                 type="number"
                 step="0.1"
                 value={Number(vector[axis].toFixed(2))}
