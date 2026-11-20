@@ -1,38 +1,36 @@
-import React, { useEffect, useState } from 'react'
-import { HiBars3BottomRight, HiBars3 } from "react-icons/hi2";
+import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Layers3, Ruler, Triangle, Box } from 'lucide-react';
+import * as THREE from 'three';
 
 const AboutMesh = ({ meshItems, fileInfo: { name, extension } }) => {
-  let meshes = null;
-  if (meshItems) {
-    meshes = meshItems.length ? meshItems : meshItems.children
-  }
-  const [toggle, setToggle] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const stats = useMemo(() => {
+    const root = meshItems?.isObject3D ? meshItems : null;
+    const meshes = [];
+    if (root) root.traverse((node) => { if (node.isMesh) meshes.push(node); });
+    else if (Array.isArray(meshItems)) meshes.push(...meshItems);
+    let triangles = 0;
+    meshes.forEach((mesh) => {
+      const geometry = mesh.geometry;
+      triangles += geometry?.index ? geometry.index.count / 3 : (geometry?.attributes?.position?.count || 0) / 3;
+    });
+    let dimensions = '—';
+    if (root) {
+      const box = new THREE.Box3().setFromObject(root);
+      if (!box.isEmpty()) { const size = box.getSize(new THREE.Vector3()); dimensions = `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`; }
+    }
+    return { meshes: meshes.length, triangles: Math.floor(triangles).toLocaleString(), dimensions };
+  }, [meshItems]);
 
-  useEffect(() => {
-    if (window.innerWidth < 1366) { setToggle(true) }
-  }, [])
+  return <aside className={`scene-inspector ${collapsed ? 'is-collapsed' : ''}`}>
+    <button className="scene-inspector-toggle" aria-label={collapsed ? 'Expand scene details' : 'Collapse scene details'} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}</button>
+    {!collapsed && <><div className="scene-inspector-kicker">SCENE INSPECTOR</div><span className="scene-inspector-format">{extension?.toUpperCase()}</span><h3 title={`${name}.${extension}`}>{name}</h3>
+      <div className="scene-stat"><Layers3 size={14}/><span>Objects</span><b>{stats.meshes}</b></div>
+      <div className="scene-stat"><Triangle size={14}/><span>Triangles</span><b>{stats.triangles}</b></div>
+      <div className="scene-stat"><Ruler size={14}/><span>Bounds</span></div><div className="scene-bounds"><Box size={12}/>{stats.dimensions}</div>
+    </>}
+    <style>{`.scene-inspector{position:absolute;z-index:8;left:18px;top:82px;width:220px;padding:16px;background:rgba(255,255,255,.88);border:1px solid rgba(220,222,232,.8);border-radius:13px;box-shadow:0 10px 32px #24233b12;backdrop-filter:blur(16px);font:12px Inter,system-ui,sans-serif;color:#303240;transition:width .2s,padding .2s}.scene-inspector.is-collapsed{width:38px;height:38px;padding:9px}.scene-inspector-toggle{position:absolute;right:8px;top:8px;border:0;background:transparent;color:#777b89;cursor:pointer;padding:3px}.scene-inspector-kicker{font-size:9px;letter-spacing:1.2px;color:#898d9b;font-weight:700;margin-bottom:12px}.scene-inspector-format{display:inline-block;font-size:9px;letter-spacing:.6px;font-weight:700;padding:4px 7px;border-radius:5px;background:#f0edff;color:#6d5cd2}.scene-inspector h3{font-size:14px;margin:9px 20px 13px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.scene-stat{display:flex;align-items:center;gap:8px;padding:7px 0;color:#858997;border-top:1px solid #eeeef3}.scene-stat b{margin-left:auto;color:#383a47;font-size:11px}.scene-bounds{display:flex;align-items:center;gap:6px;color:#545867;font-size:10px;padding:6px 0 0 22px}`}</style>
+  </aside>;
+};
 
-
-  return (<>
-    <div className={` p-4 absolute rounded-r-lg shadow-xl left-0 top-20 overflow-hidden h-48 bg-white bg-opacity-60 backdrop-blur-md transition-all
-      ${toggle ? "w-8 h-12 " : " w-48"}
-      `}>
-      <div onClick={() => setToggle(!toggle)} className=' absolute top-0 right-0 cursor-pointer p-1 opacity-80 '>
-        {toggle ? <HiBars3 size={25} className=' p-0.5' /> : <HiBars3BottomRight size={25} className=' p-0.5' />}
-      </div>
-      <div className={`${toggle && "invisible"} flex gap-2 flex-col`}>
-        <p className=' bg-slate-400 tracking-wider text-white bg-opacity-50 w-fit px-4 rounded-full text-sm font-bold opacity-80 border uppercase'>{extension}</p>
-        <div className=' flex flex-col w-40 text-sm gap-1 rounded-md p-1 shadow-inner '>
-          <p className=' text-sm overflow-hidden whitespace-nowrap border-b-2 border-gray-200 ' title={`${name}.${extension}`}>{name.split(".").pop()}</p>
-          <div className=' h-24 overflow-y-scroll pl-2 text-xs flex flex-col gap-1'>
-            {meshes && <p>Mesh : {meshes.length}</p>}
-
-          </div>
-        </div>
-      </div>
-    </div>
-  </>
-  )
-}
-
-export default AboutMesh
+export default AboutMesh;

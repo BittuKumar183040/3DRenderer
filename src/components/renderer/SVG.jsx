@@ -1,13 +1,17 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader";
 import { Bounds, Grid, OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import TopPanel from "../simulation/TopPanel";
 import Gizmo from "../simulation/Gizmo";
-import AboutMesh from "../simulation/AboutMesh";
+import SelectionInspector from "../simulation/SelectionInspector";
+import SceneGraphSidebar from "../simulation/SceneGraphSidebar";
+import SelectionOutline from "../simulation/SelectionOutline";
+import SceneGraphCapture from "../simulation/SceneGraphCapture";
 
 
-const SvgMesh = ({ fileUrl, setMeshItems, randomColor }) => {
+const SvgMesh = ({ fileUrl, setMeshItems, randomColor, wireframe, onSelect }) => {
+  const groupRef = useRef(null);
   const data = useLoader(SVGLoader, fileUrl);
   let paths = data?.paths || [];
 
@@ -19,7 +23,7 @@ const SvgMesh = ({ fileUrl, setMeshItems, randomColor }) => {
   });
 
   useEffect(() => {
-    setMeshItems(paths);
+    if (groupRef.current) setMeshItems(groupRef.current);
   }, [setMeshItems, paths]);
 
   const generateRGBRandomColor = () => {
@@ -43,11 +47,11 @@ const SvgMesh = ({ fileUrl, setMeshItems, randomColor }) => {
   }
 
   return (
-    <group scale={[0.01, 0.01, 0.01]}>
+    <group ref={groupRef} name="SVG Scene" scale={[0.01, 0.01, 0.01]}>
       {shapes.map(({ shape, color }, index) => (
-        <mesh key={index}>
+        <mesh key={index} name={`SVG shape ${index + 1}`} onClick={(event) => { event.stopPropagation(); onSelect(event.object); }}>
           <shapeGeometry args={[shape]} />
-          <meshBasicMaterial color={color} side={2} />
+          <meshBasicMaterial color={color} side={2} wireframe={wireframe} />
         </mesh>
       ))}
     </group>
@@ -64,6 +68,10 @@ const SVG = ({ file: { file, name, extension } }) => {
   const [meshItems, setMeshItems] = useState(null);
   const [fileUrl, setFileUrl] = useState(null);
   const [randomColor, setRandomColor] = useState(0);
+  const [wireframe, setWireframe] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [selectedObject, setSelectedObject] = useState(null);
+  const [sceneRoot, setSceneRoot] = useState(null);
 
   useEffect(() => {
     if (file instanceof File && file.type === "image/svg+xml") {
@@ -90,6 +98,8 @@ const SVG = ({ file: { file, name, extension } }) => {
       case "ambient":
         setLight(item.ambient.value);
         break;
+      case "wireframe": setWireframe((value) => !value); break;
+      case "autorotate": setAutoRotate((value) => !value); break;
 
       case "reset":
         setRandomColor(0);
@@ -109,21 +119,24 @@ const SVG = ({ file: { file, name, extension } }) => {
   }, []);
 
   return (
-    <div className='relative h-dvh w-screen'>
-      {fileUrl ? <Canvas key={resetKey}>
+    <div className='renderer-workspace relative h-dvh w-screen'>
+      {fileUrl ? <Canvas key={resetKey} onPointerMissed={() => setSelectedObject(null)}>
         <ambientLight intensity={light} />
         <PerspectiveCamera makeDefault={true} position={[0, 100, 250]} fov={75} />
 
-        <OrbitControls makeDefault />
+        <OrbitControls makeDefault autoRotate={autoRotate} autoRotateSpeed={1.4} />
         <Bounds fit margin={2} observe>
-          <SvgMesh fileUrl={fileUrl} setMeshItems={handleSetMeshItems} randomColor={randomColor} />
+          <SvgMesh fileUrl={fileUrl} setMeshItems={handleSetMeshItems} randomColor={randomColor} wireframe={wireframe} onSelect={setSelectedObject} />
         </Bounds>
         <Gizmo />
+        <SelectionOutline object={selectedObject} />
+        <SceneGraphCapture onScene={setSceneRoot} />
         <Grid cellSize={12} scale={100} />
       </Canvas> : <></>
       }
       <TopPanel meshItems={meshItems} fallback={fallback} initial={initial} />
-      <AboutMesh meshItems={meshItems} fileInfo={{ name, extension }} />
+      <SelectionInspector object={selectedObject} root={meshItems} onSelect={setSelectedObject} onClose={() => setSelectedObject(null)} />
+      <SceneGraphSidebar root={sceneRoot} selected={selectedObject} onSelect={setSelectedObject} title={name || 'SVG Scene'} />
     </div>
   );
 };

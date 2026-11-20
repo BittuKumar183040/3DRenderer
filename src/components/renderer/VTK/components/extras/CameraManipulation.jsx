@@ -22,7 +22,8 @@ const CameraManipulation = ({dimension}) => {
                 enableRotate={dimension}
                 args={[camera, gl.domElement]}
             />
-        <GizmoHelper alignment="bottom-left" margin={[95, 95]}>
+        {/* Offset past the persistent VTK sidebar so the axis widget stays visible. */}
+        <GizmoHelper alignment="bottom-left" margin={[382, 86]}>
             <group scale={new Vector3(0.85,0.85,0.85)}>
                 <GizmoViewport disabled={true} hideNegativeAxes={true} labelColor="white" labels={dimension?["X", "Y", "Z"]:["X", "Y", ""]} axisHeadScale={1}/>
             </group>

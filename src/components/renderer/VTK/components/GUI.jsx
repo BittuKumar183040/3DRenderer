@@ -4,8 +4,8 @@ import { BiDownArrow, BiUpArrow } from 'react-icons/bi'
 const GUI = ({changesMade, metaData}) => {
     const [active, setActive]=useState()
     const [pointSize, setPointSize]=useState(0)
-    const [showInfo, setShowInfo]=useState(false)
-    const [showProp, setShowProp]=useState(false)
+    const [showInfo, setShowInfo]=useState(true)
+    const [showProp, setShowProp]=useState(true)
     const info={
             "Name": metaData.Name,
             "Size": metaData.Size,

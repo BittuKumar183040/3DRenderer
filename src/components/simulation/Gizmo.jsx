@@ -5,7 +5,8 @@ const Gizmo = () => {
   return (
     <GizmoHelper
       alignment="bottom-left"
-      margin={[80, 80]}
+      // Keep the axis widget clear of the persistent 250px scene tree.
+      margin={[334, 86]}
     >
       <GizmoViewport axisColors={['red', 'green', 'black']} labelColor="white" />
     </GizmoHelper>

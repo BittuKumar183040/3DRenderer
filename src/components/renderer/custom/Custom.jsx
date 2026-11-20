@@ -11,13 +11,14 @@ const initial = {
   light: 2,
 };
 
-const Custom = () => {
+// eslint-disable-next-line react/prop-types
+const Custom = ({defaultIdx = 0}) => {
   const [light] = useState(initial.light);
 
-  const [vertexEditor, setVertexEditor] = useState(defaultVertex[0]);
-  const [fragmentEditor, setFragmentEditor] = useState(defaultFragment[0]);
-  const [vertexShader, setVertexShader] = useState(defaultVertex[0]);
-  const [fragmentShader, setFragmentShader] = useState(defaultFragment[0]);
+  const [vertexEditor, setVertexEditor] = useState(defaultVertex[defaultIdx]);
+  const [fragmentEditor, setFragmentEditor] = useState(defaultFragment[defaultIdx]);
+  const [vertexShader, setVertexShader] = useState(defaultVertex[defaultIdx]);
+  const [fragmentShader, setFragmentShader] = useState(defaultFragment[defaultIdx]);
 
   const applyShader = () => {
     setVertexShader(vertexEditor);

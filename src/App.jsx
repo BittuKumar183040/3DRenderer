@@ -19,7 +19,7 @@ function App() {
         "fbx": <FBX file={file} />,
         "vtk": <VTK file={file} />,
         "svg": <SVG file={file} />,
-        "custom": <Custom file={file} />,
+        "custom": <Custom defaultIdx={0}/>,
       }[file.extension]}
     </div>
   )

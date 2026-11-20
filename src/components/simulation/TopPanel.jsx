@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { BiReset } from "react-icons/bi";
 import { MdDriveFolderUpload } from "react-icons/md";
 import { CgLoadbar } from "react-icons/cg";
+import { Camera, Maximize2, RotateCw, Box } from "lucide-react";
 import SelectMenu from '../module/SelectMenu';
 
 const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
@@ -20,9 +21,24 @@ const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
     sendBack("ambient", { value: e.target.value })
   }
 
-  const handleSelectItemClick = (e) => {
-    console.log(e)
+  const handleSelectItemClick = (target) => {
+    if (target) target.visible = !target.visible;
   }
+
+  const capture = () => {
+    const canvas = document.querySelector("canvas");
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = "forma-view.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+  const fullscreen = () => {
+    const canvas = document.querySelector("canvas");
+    const workspace = canvas?.closest(".renderer-workspace") || canvas?.parentElement;
+    if (!document.fullscreenElement) workspace?.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  };
 
   return (
     <div className=' container w-11/12 md:w-full flex gap-2 items-center p-2 rounded-b-lg shadow-md bg-opacity-60 text-gray-600  select-none absolute top-0 left-1/2 -translate-x-1/2 z-10 bg-white'
@@ -40,6 +56,10 @@ const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
         <input type='range' onChange={handleChange} min={1} max={10} value={range} className='w-16 sm:w-28' />
       </div>
       <div className=' relative flex items-center flex-1 justify-end gap-4'>
+        <button title="Save viewport as PNG" className="flex items-center gap-1 text-xs hover:text-violet-600" onClick={capture}><Camera size={16}/><span className="hidden sm:inline">Capture</span></button>
+        <button title="Toggle fullscreen" className="hover:text-violet-600" onClick={fullscreen}><Maximize2 size={16}/></button>
+        <button title="Toggle wireframe" className="hover:text-violet-600" onClick={() => sendBack("wireframe")}><Box size={16}/></button>
+        <button title="Toggle auto-rotate" className="hover:text-violet-600" onClick={() => sendBack("autorotate")}><RotateCw size={16}/></button>
         {meshes && <SelectMenu title={"Objects"} items={meshes} handleClick={handleSelectItemClick} />}
         <button className=' cursor-pointer active:scale-90 flex gap-2' onClick={() => location.reload()} >
           <MdDriveFolderUpload size={25} className=' p-0.5opacity-70 ' />

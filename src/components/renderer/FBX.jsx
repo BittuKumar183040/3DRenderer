@@ -4,15 +4,18 @@ import { Canvas } from '@react-three/fiber';
 import { Bounds, GizmoHelper, GizmoViewport, Grid, OrbitControls, PerspectiveCamera, useFBX } from '@react-three/drei'
 import * as THREE from "three";
 import TopPanel from '../simulation/TopPanel';
-import AboutMesh from '../simulation/AboutMesh';
 import Gizmo from '../simulation/Gizmo';
+import SelectionInspector from '../simulation/SelectionInspector';
+import SceneGraphSidebar from '../simulation/SceneGraphSidebar';
+import SelectionOutline from '../simulation/SelectionOutline';
+import SceneGraphCapture from '../simulation/SceneGraphCapture';
 
 const getFbxObj = (file) => {
   const fbx = useFBX(file);
   return fbx;
 }
 
-function Model({ fileUrl, setMeshItems }) {
+function Model({ fileUrl, setMeshItems, onSelect }) {
 
   const fbx = getFbxObj(fileUrl)
   useEffect(() => {
@@ -31,7 +34,7 @@ function Model({ fileUrl, setMeshItems }) {
     }
   }, [fbx]);
   return (
-    <primitive object={fbx} />
+    <primitive object={fbx} onClick={(event) => { event.stopPropagation(); onSelect(event.object); }} />
   );
 }
 
@@ -45,6 +48,16 @@ const FBX = ({ file: { file, name, extension } }) => {
   const [reset, setReset] = useState(false);
   const [light, setLight] = useState(initial.light);
   const [meshItems, setMeshItems] = useState(null)
+  const [wireframe, setWireframe] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [selectedObject, setSelectedObject] = useState(null);
+  const [sceneRoot, setSceneRoot] = useState(null);
+
+  useEffect(() => {
+    meshItems?.traverse?.((node) => {
+      if (node.isMesh) (Array.isArray(node.material) ? node.material : [node.material]).forEach((material) => { if (material && 'wireframe' in material) material.wireframe = wireframe; });
+    });
+  }, [meshItems, wireframe]);
 
   useEffect(() => {
     if (file instanceof File) {
@@ -81,6 +94,8 @@ const FBX = ({ file: { file, name, extension } }) => {
       case "ambient":
         setLight(item["ambient"].value)
         break;
+      case "wireframe": setWireframe((value) => !value); break;
+      case "autorotate": setAutoRotate((value) => !value); break;
 
       case "reset":
         setReset(!reset);
@@ -90,30 +105,33 @@ const FBX = ({ file: { file, name, extension } }) => {
   }
 
   return (
-    <div className='relative h-dvh w-screen'>
+    <div className='renderer-workspace relative h-dvh w-screen'>
       {
         fileUrl && <>
           <ToastContainer autoClose={1000} pauseOnHover={false} />
-          <Canvas gl={{
+          <Canvas onPointerMissed={() => setSelectedObject(null)} gl={{
             toneMapping: THREE.ACESFilmicToneMapping,
             outputEncoding: THREE.sRGBEncoding,
           }}>
 
             <ambientLight intensity={light} />
             <PerspectiveCamera makeDefault={true} position={[0, 100, 250]} fov={75} />
-            <OrbitControls />
+            <OrbitControls autoRotate={autoRotate} autoRotateSpeed={1.4} />
             <Bounds fit margin={2} observe>
-              <Model fileUrl={fileUrl} setMeshItems={setMeshItems} />
+              <Model fileUrl={fileUrl} setMeshItems={setMeshItems} onSelect={setSelectedObject} />
             </Bounds>
             <Gizmo />
+            <SceneGraphCapture onScene={setSceneRoot} />
+            <SelectionOutline object={selectedObject} />
             <Grid cellSize={12} scale={100} />
           </Canvas>
           {meshItems && <>
             <TopPanel meshItems={meshItems} fallback={fallback} initial={initial} />
-            <AboutMesh meshItems={meshItems} fileInfo={{ name, extension }} />
             {/* <StatusBar meshItems={meshItems} /> */}
           </>
           }
+          <SelectionInspector object={selectedObject} root={meshItems} onSelect={setSelectedObject} onClose={() => setSelectedObject(null)} />
+          <SceneGraphSidebar root={sceneRoot} selected={selectedObject} onSelect={setSelectedObject} title={name || 'Scene'} />
         </>
       }
     </div>

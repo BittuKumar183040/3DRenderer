@@ -1,76 +1,46 @@
 import { useEffect, useState } from 'react';
 import PreFile from './components/major/PreFile';
-import { useDispatch, useSelector } from 'react-redux';
-import { setInitial } from './components/redux/vtksSlice';
-import { current } from '@reduxjs/toolkit';
 
 const VTK = ({ file }) => {
     const [data, setData] = useState([]);
-    const dispatch = useDispatch()
-
-
-    const vtkFileData = (file) => {
-        if (file) {
-            const fileContents = file.file;
-            console.log(fileContents, file)
-            if (file instanceof File) {
-                const reader = new FileReader();
-
-                reader.onload = (event) => {
-                    const content = event.target.result;
-                    console.log("File content:", content);
-                    const disc = {
-                        visible: true,
-                        id: file.name,
-                        Name: file.name,
-                        Size: 10,
-                        Type: "Unstructured Grid",
-                        Cells: "",
-                        Points: "",
-                        Min: null,
-                        Max: null,
-                        Data: content
-                    }
-                    setData(disc);
-                };
-                reader.onerror = (err) => {
-                    console.error("File read error", err);
-                };
-                reader.readAsText(file);
-            } else {
-                console.log(fileContents)
-
-                const disc = {
-                    visible: true,
-                    id: file.name,
-                    Name: `${file.name}${file.extension}`,
-                    Size: 10,
-                    Type: "Unstructured Grid",
-                    Cells: "",
-                    Points: "",
-                    Min: null,
-                    Max: null,
-                    Data: fileContents
-                }
-                console.log(disc)
-                setData([disc])
-            }
-        }
-        else {
-            console.log("No file found")
-        }
-    }
 
     useEffect(() => {
-        console.log(file)
-        file && vtkFileData(file)
-    }, [])
+        if (!file) { setData([]); return; }
+        // Bundled samples wrap their text in file.file; browser uploads are File objects.
+        const source = file.file ?? file;
+        const makeRecord = (text, sourceName) => {
+            if (typeof text !== 'string') {
+                console.error('VTK data must be text.', source);
+                setData([]);
+                return;
+            }
+            setData([{
+                visible: true,
+                id: sourceName,
+                Name: sourceName,
+                Size: 10,
+                Type: 'Unstructured Grid',
+                Cells: '',
+                Points: '',
+                Min: null,
+                Max: null,
+                Data: text,
+            }]);
+        };
 
-    return (
-        <>
-            {data.length > 0 && <PreFile allData={data} />}
-        </>
-    )
-}
+        if (source instanceof File) {
+            const reader = new FileReader();
+            reader.onload = (event) => makeRecord(String(event.target.result ?? ''), source.name);
+            reader.onerror = () => setData([]);
+            reader.readAsText(source);
+        } else {
+            const text = typeof source === 'string' ? source : source?.file;
+            const name = source?.name ?? `${file.name ?? 'vtk-model'}.vtk`;
+            makeRecord(text, name);
+        }
+    }, [file]);
 
-export default VTK
+    return data.length > 0 ? <PreFile allData={data} /> : null;
+};
+
+export default VTK;

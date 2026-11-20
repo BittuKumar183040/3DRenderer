@@ -16,6 +16,8 @@ import { MemorizedModel } from './components/major/Model';
 // import { useMemo } from 'react';
 import { Delta } from './components/extras/Delta';
 import LimitVisibility from './components/extras/LimitVisibility';
+import './vtk-workspace.css';
+import { Layers3 } from 'lucide-react';
 
 const VtkRendering = ({ vtkData }) => {
   const [rotate, setRotate] = useState([0,0,0])
@@ -119,7 +121,7 @@ const VtkRendering = ({ vtkData }) => {
   // }
   return (
     <>
-    <div className='relative w-screen h-screen left-0 top-0 overflow-hidden' style={{background:"rgb(156, 163, 175)"}}>
+    <div className='renderer-workspace vtk-workspace relative w-screen h-screen left-0 top-0 overflow-hidden'>
         <Canvas camera={{near:0.000001}} onCreated={handleCreated}>
           <CameraManipulation dimension={metaData.is3D}/>
           <Bounds clip fit margin={0.25}>
@@ -153,21 +155,21 @@ const VtkRendering = ({ vtkData }) => {
         </Canvas>
       {
         metaData.Min!==null && 
-        <div className='absolute bottom-0 right-0 h-1/2 bg-slate-500'>
-            <Graph colorPalette={colorPalette} distance={{Min:metaData.Min, Max:metaData.Max}}/>
-        </div>
+        <Graph colorPalette={colorPalette} distance={{Min:metaData.Min, Max:metaData.Max}}/>
       }
-      <div className='absolute left-2 top-2 flex gap-2'>
-        <GUI changesMade={changesMade} metaData={metaData}/>
-        {/* <LimitVisibility distance={{min:metaData.Min, max:metaData.Max}} limitVisible={(val)=>setLimitVisible(val)}/> */}
-        {metaData.Min===null?null:
-        <MinMax MinMaxChange={MinMaxChange} metaData={{Min:metaData.Min, Max:metaData.Max}}/>
-        }
+      <div className="vtk-titlebar"><div className="vtk-title-mark">V</div><div className="vtk-title-copy"><strong>{metaData.Name || 'Scientific dataset'}</strong><span>VTK · {metaData.is3D ? '3D field' : '2D field'}</span></div><span className="vtk-live"><i/> READY</span></div>
+      <aside className="vtk-sidebar">
+        <div className="vtk-sidebar-heading"><Layers3 size={15}/><span>SCENE GRAPH</span></div>
+        <div className="vtk-tree-row"><i/> <span className="vtk-tree-icon">◈</span><span className="vtk-tree-name">{metaData.Name || 'VTK dataset'}</span></div>
+        <div className="vtk-tree-row child"><i/> <span className="vtk-tree-icon">▧</span><span className="vtk-tree-name">{metaData.Type || 'Unstructured Grid'}</span></div>
+        <div className="vtk-sidebar-section"><GUI changesMade={changesMade} metaData={metaData}/></div>
+        <div className="vtk-sidebar-metrics"><span><b>{metaData.Points || '—'}</b><small>POINTS</small></span><span><b>{metaData.Cells || '—'}</b><small>CELLS</small></span>{metaData.Min !== null && <span className="vtk-range-metric"><small>SCALAR RANGE</small><b>{Number(metaData.Min).toPrecision(3)} — {Number(metaData.Max).toPrecision(3)}</b></span>}</div>
+      </aside>
+      <div className='vtk-toolbar absolute flex gap-2'>
+        {metaData.Min===null?null:<MinMax MinMaxChange={MinMaxChange} metaData={{Min:metaData.Min, Max:metaData.Max}}/>}
         <CameraGUI changeRotate={(e)=>setRotate(e)}/>
         <ColorPalette changePalettes={(e)=>setColorPalette(e)}/>
-        <div className='flex gap-2 flex-row h-9 px-2 cursor-pointer bg-white items-center rounded-md'>
-          <p className=' font-bold'>{metaData.is3D?"3D":"2D"}</p>
-        </div>
+        <div className='vtk-dimension-chip'><span className="vtk-dimension-dot"/><p>{metaData.is3D?"3D":"2D"} VIEW</p></div>
         {/* <Delta dimension={metaData.is3D} setDeltaBack={setDeltaBack}/> */}
         {/* <div className='flex gap-2 flex-row h-9 px-2 cursor-pointer bg-white items-center rounded-md'>
           <p onClick={pointVariation}>👋</p>
