@@ -1,34 +1,111 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, Eye, EyeOff, Layers3 } from 'lucide-react';
-import { LuBox, LuCamera, LuCircle, LuLightbulb, LuPackage, LuScanLine } from 'react-icons/lu';
+import { useState } from "react";
+import { ChevronDown, ChevronRight, Eye, EyeOff, Layers3 } from "lucide-react";
+import {
+  LuBox,
+  LuCamera,
+  LuCircle,
+  LuLightbulb,
+  LuPackage,
+  LuScanLine,
+} from "react-icons/lu";
 
 function TypeIcon({ node }) {
-  if (node.isMesh) return <LuBox/>;
-  if (node.isLight) return <LuLightbulb/>;
-  if (node.isCamera) return <LuCamera/>;
-  if (node.isScene) return <LuScanLine/>;
-  if (node.isGroup) return <LuPackage/>;
-  return <LuCircle/>;
+  if (node.isMesh) return <LuBox />;
+  if (node.isLight) return <LuLightbulb />;
+  if (node.isCamera) return <LuCamera />;
+  if (node.isScene) return <LuScanLine />;
+  if (node.isGroup) return <LuPackage />;
+  return <LuCircle />;
 }
 
 function TreeItem({ node, selected, onSelect, onVisibilityChange, depth = 0 }) {
   const [open, setOpen] = useState(true);
-  return <div>
-    <div className={`scene-tree-row ${selected === node ? 'active' : ''}`} style={{ paddingLeft: 10 + depth * 13 }} onClick={() => onSelect(node)} title={node.name || node.type}>
-      {node.children?.length ? <button onClick={(event) => { event.stopPropagation(); setOpen(!open); }}>{open ? <ChevronDown size={12}/> : <ChevronRight size={12}/>}</button> : <i/>}
-      <span className="scene-tree-icon"><TypeIcon node={node}/></span><span className="scene-tree-name">{node.name || node.type}</span>
-      <button className="scene-tree-visibility" title={node.visible ? 'Hide object' : 'Show object'} onClick={(event) => { event.stopPropagation(); node.visible = !node.visible; onVisibilityChange(); }}><span className="sr-only">{node.visible ? 'Hide' : 'Show'} {node.name || node.type}</span>{node.visible ? <Eye size={13}/> : <EyeOff size={13}/>}</button>
+  return (
+    <div>
+      <div
+        className={`group flex h-[29px] cursor-pointer items-center gap-1.5 rounded-md pr-2 text-[10px] text-[#5c606d] hover:bg-[#f3f2fa] ${selected === node ? "bg-[#ece9ff] font-semibold text-[#5b4cb9] shadow-[inset_2px_0_#7667df]" : ""}`}
+        style={{ paddingLeft: 10 + depth * 13 }}
+        onClick={() => onSelect(node)}
+        title={node.name || node.type}
+      >
+        {node.children?.length ? (
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen(!open);
+            }}
+            className="grid h-4 w-3 place-items-center border-0 bg-transparent p-0 text-[#989ba6]"
+          >
+            {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+        ) : (
+          <i className="w-3 shrink-0" />
+        )}
+        <span className="grid w-[15px] shrink-0 place-items-center text-[13px] text-[#8275df]">
+          <TypeIcon node={node} />
+        </span>
+        <span className="flex-1 truncate">{node.name || node.type}</span>
+        <button
+          className="grid h-[22px] w-5 shrink-0 place-items-center rounded border-0 bg-transparent p-0 text-[#858997] opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-[#e8e6f5] hover:text-[#6355c5]"
+          title={node.visible ? "Hide object" : "Show object"}
+          onClick={(event) => {
+            event.stopPropagation();
+            node.visible = !node.visible;
+            onVisibilityChange();
+          }}
+        >
+          <span className="sr-only">
+            {node.visible ? "Hide" : "Show"} {node.name || node.type}
+          </span>
+          {node.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+        </button>
+      </div>
+      {open &&
+        node.children?.map((child) => (
+          <TreeItem
+            key={child.uuid}
+            node={child}
+            selected={selected}
+            onSelect={onSelect}
+            onVisibilityChange={onVisibilityChange}
+            depth={depth + 1}
+          />
+        ))}
     </div>
-    {open && node.children?.map((child) => <TreeItem key={child.uuid} node={child} selected={selected} onSelect={onSelect} onVisibilityChange={onVisibilityChange} depth={depth + 1}/>)}
-  </div>;
+  );
 }
 
-export default function SceneGraphSidebar({ root, selected, onSelect, title = 'Scene' }) {
+export default function SceneGraphSidebar({
+  root,
+  selected,
+  onSelect,
+  title = "Scene",
+}) {
   if (!root) return null;
   let count = 0;
-  root.traverse?.(() => { count += 1; });
+  root.traverse?.(() => {
+    count += 1;
+  });
   const [, refresh] = useState(0);
-  return <aside className="scene-graph-sidebar"><header><div><span>WORKSPACE</span><h2><Layers3 size={15}/> {title}</h2></div><b>{count}</b></header><div className="scene-graph-tree"><TreeItem node={root} selected={selected} onSelect={onSelect} onVisibilityChange={() => refresh((v) => v + 1)}/></div>
-    <style>{`.scene-graph-sidebar{position:absolute;z-index:12;left:16px;top:72px;bottom:16px;width:250px;background:rgba(255,255,255,.95);border:1px solid #e7e8ef;border-radius:13px;box-shadow:0 12px 38px #24233b12;backdrop-filter:blur(16px);font:12px Inter,system-ui,sans-serif;color:#303240;overflow:hidden;display:flex;flex-direction:column}.scene-graph-sidebar header{display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid #eeeef3}.scene-graph-sidebar header span{font-size:8px;letter-spacing:1.2px;color:#999daa;font-weight:700}.scene-graph-sidebar header h2{display:flex;align-items:center;gap:7px;margin:5px 0 0;font-size:13px}.scene-graph-sidebar header h2 svg{color:#7769d5}.scene-graph-sidebar header>b{font-size:9px;font-weight:500;color:#898d99;background:#f2f2f6;border-radius:10px;padding:4px 7px}.scene-graph-tree{padding:8px 5px;overflow:auto}.scene-tree-row{height:29px;display:flex;align-items:center;gap:6px;padding-right:7px;border-radius:5px;color:#5c606d;cursor:pointer;font-size:10px}.scene-tree-row:hover{background:#f3f2fa}.scene-tree-row.active{background:#ece9ff;color:#5b4cb9;font-weight:650;box-shadow:inset 2px 0 #7667df}.scene-tree-row button{border:0;background:none;padding:0;width:12px;height:16px;color:#989ba6;display:grid;place-items:center;cursor:pointer}.scene-tree-row button.scene-tree-visibility{width:20px;height:22px;border-radius:4px;opacity:0;color:#858997}.scene-tree-row:hover button.scene-tree-visibility,.scene-tree-row button.scene-tree-visibility:focus{opacity:1}.scene-tree-row button.scene-tree-visibility:hover{background:#e8e6f5;color:#6355c5}.scene-tree-row i{width:12px}.scene-tree-icon{font-size:13px;color:#8275df;width:15px;display:grid;place-items:center}.scene-tree-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}.scene-tree-sidebar .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:640px){.scene-graph-sidebar{top:60px;bottom:10px;left:8px;width:205px;max-height:52vh}}`}</style>
-  </aside>;
+  return (
+    <aside className="absolute bottom-4 left-4 top-[72px] z-[12] flex w-[250px] flex-col overflow-hidden rounded-[13px] border border-[#e7e8ef] bg-white/[.95] text-xs text-[#303240] shadow-[0_12px_38px_#24233b12] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-2 max-[640px]:top-[60px] max-[640px]:max-h-[52vh] max-[640px]:w-[205px]">
+      <header className="flex items-center justify-between border-b border-[#eeeef3] p-[14px]">
+        <div>
+          <span className="text-[8px] font-bold tracking-[1.2px] text-[#999daa]">WORKSPACE</span>
+          <h2 className="mt-[5px] flex items-center gap-[7px] text-[13px]">
+            <Layers3 size={15} /> {title}
+          </h2>
+        </div>
+        <b className="rounded-full bg-[#f2f2f6] px-[7px] py-1 text-[9px] font-medium text-[#898d99]">{count}</b>
+      </header>
+      <div className="flex-1 overflow-auto px-[5px] py-2">
+        <TreeItem
+          node={root}
+          selected={selected}
+          onSelect={onSelect}
+          onVisibilityChange={() => refresh((v) => v + 1)}
+        />
+      </div>
+    </aside>
+  );
 }
