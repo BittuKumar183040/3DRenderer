@@ -41,8 +41,8 @@ export default function SelectionInspector({
     ? object.material[0]
     : object.material;
   const update = () => refresh((value) => value + 1);
-  return <aside className="absolute bottom-[18px] right-[18px] top-[72px] z-[15] w-[310px] overflow-auto rounded-[14px] border border-[#e7e8ef] bg-white/[.96] text-xs text-[#303240] shadow-[0_16px_48px_#25243c20] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-[10px] max-[640px]:right-[10px] max-[640px]:top-auto max-[640px]:max-h-[58vh] max-[640px]:w-auto">
-    <header className="sticky top-0 z-[1] flex items-start justify-between border-b border-[#eeeef3] bg-white/[.95] px-4 pb-3 pt-[17px] backdrop-blur-xl">
+  return <aside className="absolute bottom-[18px] right-[18px] top-[72px] z-[15] w-[310px] overflow-auto rounded-[14px] border border-[#e7e8ef] bg-white/[.95] text-xs text-[#303240] shadow-[0_16px_48px_#25243c20] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-[10px] max-[640px]:right-[10px] max-[640px]:top-auto max-[640px]:max-h-[58vh] max-[640px]:w-auto">
+    <header className="sticky top-0 z-[1] flex items-start bg-opacity-60 justify-between border-b border-[#eeeef3] bg-white px-4 pb-3 pt-[17px] backdrop-blur-xl">
       <div>
         <span className="text-[9px] font-bold tracking-[1.1px] text-[#8274dc]">
           SELECTION
