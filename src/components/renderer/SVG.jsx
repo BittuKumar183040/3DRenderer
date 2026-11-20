@@ -121,7 +121,7 @@ const SVG = ({ file: { file, name, extension } }) => {
 
   return (
     <div className='renderer-workspace relative h-dvh w-screen'>
-      {fileUrl ? <Canvas key={resetKey} onPointerMissed={() => setSelectedObject(null)}>
+      {fileUrl ? <Canvas key={resetKey} gl={{ preserveDrawingBuffer: true }} onPointerMissed={() => setSelectedObject(null)}>
         <color attach="background" args={["#e9ebf1"]} />
         <ambientLight intensity={light} />
         <PerspectiveCamera makeDefault={true} position={[0, 100, 250]} fov={75} />

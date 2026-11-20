@@ -111,6 +111,7 @@ const FBX = ({ file: { file, name, extension } }) => {
         fileUrl && <>
           <ToastContainer autoClose={1000} pauseOnHover={false} />
           <Canvas onPointerMissed={() => setSelectedObject(null)} gl={{
+            preserveDrawingBuffer: true,
             toneMapping: THREE.ACESFilmicToneMapping,
             outputEncoding: THREE.sRGBEncoding,
           }}>

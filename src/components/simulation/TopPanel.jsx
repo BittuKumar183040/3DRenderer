@@ -26,12 +26,17 @@ const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
   }
 
   const capture = () => {
-    const canvas = document.querySelector("canvas");
+    const canvas = document.querySelector(".renderer-workspace canvas");
     if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = "forma-view.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = "bexyzo-view.png";
+      link.href = url;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, "image/png");
   };
   const fullscreen = () => {
     const canvas = document.querySelector("canvas");

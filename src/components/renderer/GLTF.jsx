@@ -91,7 +91,7 @@ const GLTF = ({ file: { file, name, extension } }) => {
   return (
     <div className='renderer-workspace h-dvh w-screen'>
       <ToastContainer autoClose={1800} pauseOnHover={false} />
-      <Canvas onPointerMissed={() => setSelectedObject(null)}>
+      <Canvas gl={{ preserveDrawingBuffer: true }} onPointerMissed={() => setSelectedObject(null)}>
         <color attach="background" args={["#e9ebf1"]} />
         <ambientLight intensity={light} />
         <directionalLight position={[-200, 300, 400]} intensity={light * 2} />
