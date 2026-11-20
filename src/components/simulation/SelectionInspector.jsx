@@ -40,7 +40,6 @@ export default function SelectionInspector({
   const material = Array.isArray(object.material)
     ? object.material[0]
     : object.material;
-  const color = material?.color?.getStyle() ?? "#8b82ee";
   const update = () => refresh((value) => value + 1);
   return <aside className="absolute bottom-[18px] right-[18px] top-[72px] z-[15] w-[310px] overflow-auto rounded-[14px] border border-[#e7e8ef] bg-white/[.96] text-xs text-[#303240] shadow-[0_16px_48px_#25243c20] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-[10px] max-[640px]:right-[10px] max-[640px]:top-auto max-[640px]:max-h-[58vh] max-[640px]:w-auto">
     <header className="sticky top-0 z-[1] flex items-start justify-between border-b border-[#eeeef3] bg-white/[.95] px-4 pb-3 pt-[17px] backdrop-blur-xl">
@@ -160,20 +159,8 @@ export default function SelectionInspector({
       <section className="border-t border-[#eeeef3] px-4 py-3">
         <h3 className="mb-2.5 text-[11px] text-[#525563]">Material</h3>
         <div className="mb-2 flex items-center gap-[9px]">
-          <span
-            className="h-[25px] w-[25px] rounded-[7px] border border-[#ddd]"
-            style={{ background: color }}
-          />
-          <div>
-            <b className="block text-[10px]">
-              {material.name || material.type}
-            </b>
-            <small className="mt-[3px] block text-[10px] text-[#969aa5]">
-              {material.type}
-            </small>
-          </div>
           <input
-            className="ml-auto h-[25px] w-[30px] border-0 bg-transparent p-0"
+            className="h-[25px] w-[25px] cursor-pointer rounded-[7px] border border-[#ddd] bg-transparent p-0"
             aria-label="Material color"
             type="color"
             value={`#${material.color?.getHexString?.() || "8b82ee"}`}
@@ -183,6 +170,14 @@ export default function SelectionInspector({
               update();
             }}
           />
+          <div>
+            <b className="block text-[10px]">
+              {material.name || material.type}
+            </b>
+            <small className="mt-[3px] block text-[10px] text-[#969aa5]">
+              {material.type}
+            </small>
+          </div>
         </div>
         <label className="flex items-center justify-between py-1 text-[#777b89]">
           <span>Wireframe</span>
