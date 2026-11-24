@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { BiReset } from "react-icons/bi";
 import { MdDriveFolderUpload } from "react-icons/md";
-import { CgLoadbar } from "react-icons/cg";
-import { Camera, Maximize2, RotateCw, Box } from "lucide-react";
+import { Camera, Maximize2, RotateCw, Box, Sun } from "lucide-react";
 import SelectMenu from '../module/SelectMenu';
 
 const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
@@ -11,6 +10,7 @@ const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
     meshes = meshItems.length ? meshItems : meshItems.children
   }
   const [range, setRange] = useState(initial.light)
+  const [active, setActive] = useState({ wireframe: false, autorotate: false, fullscreen: false })
 
   const sendBack = (clicked, data = {}) => {
     fallback({ [clicked]: { ...data } })
@@ -25,6 +25,11 @@ const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
     if (target) target.visible = !target.visible;
   }
 
+  const toggle = (key) => {
+    setActive((prev) => ({ ...prev, [key]: !prev[key] }));
+    sendBack(key);
+  };
+
   const capture = () => {
     const canvas = document.querySelector(".renderer-workspace canvas");
     if (!canvas) return;
@@ -38,40 +43,73 @@ const TopPanel = ({ meshItems, fallback, initial, disable = [] }) => {
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, "image/png");
   };
+
   const fullscreen = () => {
     const canvas = document.querySelector("canvas");
     const workspace = canvas?.closest(".renderer-workspace") || canvas?.parentElement;
     if (!document.fullscreenElement) workspace?.requestFullscreen?.();
     else document.exitFullscreen?.();
+    setActive((prev) => ({ ...prev, fullscreen: !document.fullscreenElement }));
   };
 
   return (
-    <div className=' container w-11/12 md:w-full flex gap-2 items-center p-2 rounded-b-lg shadow-md bg-opacity-60 text-gray-600  select-none absolute top-0 left-1/2 -translate-x-1/2 z-10 bg-white'
-      style={{ backdropFilter: "blur(10px)" }}>
-      <div className=' flex items-center border rounded-lg shadow-sm'>
-        {!disable.includes("random") && <>
-          <p onClick={() => sendBack("random")} className=' bg-opacity-50 hover:bg-opacity-70 cursor-pointer p-0.5 px-4 active:scale-90 rounded-md text-sm'>Random</p>
-          <CgLoadbar className=' rotate-90 opacity-20' />
-        </>
-        }
-        <BiReset title='Reset the Canvas' onClick={() => sendBack("reset")} size={25} className=' p-1 cursor-pointer active:scale-90 rounded-md text-sm' />
-      </div>
-      <div className=' flex items-center text-xs gap-1 p-1 border rounded-lg shadow-sm'>
-        <label htmlFor='range'>Brightness</label>
-        <input type='range' onChange={handleChange} min={1} max={10} value={range} className='w-16 sm:w-28' />
-      </div>
-      <div className=' relative flex items-center flex-1 justify-end gap-4'>
-        <button title="Save viewport as PNG" className="flex items-center gap-1 text-xs hover:text-violet-600" onClick={capture}><Camera size={16}/><span className="hidden sm:inline">Capture</span></button>
-        <button title="Toggle fullscreen" className="hover:text-violet-600" onClick={fullscreen}><Maximize2 size={16}/></button>
-        <button title="Toggle wireframe" className="hover:text-violet-600" onClick={() => sendBack("wireframe")}><Box size={16}/></button>
-        <button title="Toggle auto-rotate" className="hover:text-violet-600" onClick={() => sendBack("autorotate")}><RotateCw size={16}/></button>
-        {meshes && <SelectMenu title={"Objects"} items={meshes} handleClick={handleSelectItemClick} />}
-        <button className=' cursor-pointer active:scale-90 flex gap-2' onClick={() => location.reload()} >
-          <MdDriveFolderUpload size={25} className=' p-0.5opacity-70 ' />
-          <p>Pick</p>
+    <div className='viewer-toolbar select-none'>
+      <div className='tool-cluster'>
+        {!disable.includes("random") && (
+          <button type='button' className='tool-btn' onClick={() => sendBack("random")}>Random</button>
+        )}
+        <button type='button' className='tool-icon-btn' title='Reset the canvas' aria-label='Reset the canvas' onClick={() => sendBack("reset")}>
+          <BiReset size={17} />
         </button>
       </div>
 
+      <label className='tool-range' aria-label='Brightness'>
+        <Sun size={13} />
+        <span>Brightness</span>
+        <input type='range' onChange={handleChange} min={1} max={10} value={range} />
+        <b>{range}</b>
+      </label>
+
+      <div className='viewer-toolbar-right'>
+        <button type='button' className='tool-icon-btn' title='Save viewport as PNG' aria-label='Save viewport as PNG' onClick={capture}>
+          <Camera size={16} />
+        </button>
+        <button
+          type='button'
+          className={`tool-icon-btn ${active.fullscreen ? 'is-active' : ''}`}
+          title='Toggle fullscreen'
+          aria-label='Toggle fullscreen'
+          onClick={fullscreen}
+        >
+          <Maximize2 size={16} />
+        </button>
+        <span className='tool-divider' aria-hidden='true' />
+        <button
+          type='button'
+          className={`tool-icon-btn ${active.wireframe ? 'is-active' : ''}`}
+          title='Toggle wireframe'
+          aria-label='Toggle wireframe'
+          aria-pressed={active.wireframe}
+          onClick={() => toggle('wireframe')}
+        >
+          <Box size={16} />
+        </button>
+        <button
+          type='button'
+          className={`tool-icon-btn ${active.autorotate ? 'is-active' : ''}`}
+          title='Toggle auto-rotate'
+          aria-label='Toggle auto-rotate'
+          aria-pressed={active.autorotate}
+          onClick={() => toggle('autorotate')}
+        >
+          <RotateCw size={16} />
+        </button>
+        {meshes && <SelectMenu title="Objects" items={meshes} handleClick={handleSelectItemClick} />}
+        <span className='tool-divider' aria-hidden='true' />
+        <button type='button' className='tool-btn' title='Pick another file' onClick={() => location.reload()}>
+          <MdDriveFolderUpload size={19} /> Pick
+        </button>
+      </div>
     </div>
   )
 }

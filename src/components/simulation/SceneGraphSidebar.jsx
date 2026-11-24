@@ -23,7 +23,7 @@ function TreeItem({ node, selected, onSelect, onVisibilityChange, depth = 0 }) {
   return (
     <div>
       <div
-        className={`group flex h-[29px] cursor-pointer items-center gap-1.5 rounded-md pr-2 text-[10px] text-[#5c606d] hover:bg-[#f3f2fa] ${selected === node ? "bg-[#ece9ff] font-semibold text-[#5b4cb9] shadow-[inset_2px_0_#7667df]" : ""}`}
+        className={`tree-row group flex h-[29px] cursor-pointer items-center gap-1.5 rounded-md pr-2 text-[10px] text-[#5c606d] hover:bg-[#f3f2fa] ${selected === node ? "bg-[#ece9ff] font-semibold text-[#5b4cb9] shadow-[inset_2px_0_#7667df]" : ""}`}
         style={{ paddingLeft: 10 + depth * 13 }}
         onClick={() => onSelect(node)}
         title={node.name || node.type}
@@ -88,7 +88,7 @@ export default function SceneGraphSidebar({
   });
   const [, refresh] = useState(0);
   return (
-    <aside className="absolute bottom-4 left-4 top-[72px] z-[12] flex w-[250px] flex-col overflow-hidden rounded-[13px] border border-[#e7e8ef] bg-white/[.95] text-xs text-[#303240] shadow-[0_12px_38px_#24233b12] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-2 max-[640px]:top-[60px] max-[640px]:max-h-[52vh] max-[640px]:w-[205px]">
+    <aside className="scene-sidebar absolute bottom-4 left-4 top-[72px] z-[12] flex w-[250px] flex-col overflow-hidden rounded-[13px] border border-[#e7e8ef] bg-white/[.95] text-xs text-[#303240] shadow-[0_12px_38px_#24233b12] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-2 max-[640px]:top-[60px] max-[640px]:max-h-[52vh] max-[640px]:w-[205px]">
       <header className="flex items-center justify-between border-b border-[#eeeef3] p-[14px]">
         <div>
           <span className="text-[8px] font-bold tracking-[1.2px] text-[#999daa]">WORKSPACE</span>

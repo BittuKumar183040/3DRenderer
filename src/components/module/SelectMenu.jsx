@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FaAngleDown } from "react-icons/fa";
-import { FaAngleUp } from 'react-icons/fa';
 
-const SelectMenu = ({ title, items, handleClick }) => {
+const SelectMenu = ({ title, items = [], handleClick }) => {
   const [toggle, setToggle] = useState(false)
-  const popupRef = useRef("")
+  const popupRef = useRef(null)
 
   const handleClickOutside = (event) => {
     if (popupRef.current && !popupRef.current.contains(event.target)) {
@@ -20,26 +19,32 @@ const SelectMenu = ({ title, items, handleClick }) => {
   }, []);
 
   return (
-    <div ref={popupRef} className=' relative'>
-      <div onClick={() => setToggle(!toggle)} className='flex gap-2 items-center text-sm rounded-md border px-2 p-0.5 cursor-pointer'>
-        <p>{title}</p>
-        {toggle ? <FaAngleUp /> : <FaAngleDown />}
-      </div>
+    <div ref={popupRef} className='select-menu'>
+      <button
+        type='button'
+        className={`select-trigger ${toggle ? 'is-open' : ''}`}
+        onClick={() => setToggle(!toggle)}
+        aria-expanded={toggle}
+        aria-haspopup='menu'
+      >
+        <span>{title}</span>
+        <FaAngleDown className='select-caret' />
+      </button>
 
-      <div className={`${toggle ? " h-28 max-w-36 opacity-100" : "h-0 w-0 opacity-0"} bg-white min-w-24 border rounded-lg backdrop-blur-md bg-opacity-80 overflow-x-hidden absolute top-8 right-0 transition-all`}>
-        {
-          items.map((item) => <p
-            key={item.uuid}
-            title={item.name}
-            id={item.id}
-            onClick={() => handleClick(item)}
-            className=' cursor-pointer whitespace-nowrap p-1 pr-3 hover:bg-gray-200 text-xs bg-opacity-30 transition-all'
-          >
-            {item.name}
-          </p>)
-        }
+      <div className={`select-popover ${toggle ? 'is-open' : ''}`} role='menu'>
+        {items.length === 0 && <p className='select-empty'>No objects</p>}
+        {items.map((item, index) => <button
+          type='button'
+          role='menuitem'
+          key={item.uuid || index}
+          title={item.name}
+          onClick={() => handleClick(item)}
+          className='select-option'
+        >
+          {item.name || item.type || `Object ${index + 1}`}
+        </button>)}
       </div>
-    </div >
+    </div>
   )
 }
 

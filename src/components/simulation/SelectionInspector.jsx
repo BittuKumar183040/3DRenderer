@@ -41,7 +41,7 @@ export default function SelectionInspector({
     ? object.material[0]
     : object.material;
   const update = () => refresh((value) => value + 1);
-  return <aside className="absolute bottom-[18px] right-[18px] top-[72px] z-[15] w-[310px] overflow-auto rounded-[14px] border border-[#e7e8ef] bg-white bg-opacity-60 text-xs text-[#303240] shadow-[0_16px_48px_#25243c20] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-[10px] max-[640px]:right-[10px] max-[640px]:top-auto max-[640px]:max-h-[58vh] max-[640px]:w-auto">
+  return <aside className="selection-inspector absolute bottom-[18px] right-[18px] top-[72px] z-[15] w-[310px] overflow-auto rounded-[14px] border border-[#e7e8ef] bg-white bg-opacity-60 text-xs text-[#303240] shadow-[0_16px_48px_#25243c20] backdrop-blur-2xl max-[640px]:bottom-[10px] max-[640px]:left-[10px] max-[640px]:right-[10px] max-[640px]:top-auto max-[640px]:max-h-[58vh] max-[640px]:w-auto">
     <header className="sticky top-0 z-[1] flex items-start justify-between border-b border-[#eeeef3] bg-transparent px-4 pb-3 pt-[17px]">
       <div>
         <span className="text-[9px] font-bold tracking-[1.1px] text-[#8274dc]">
@@ -52,7 +52,7 @@ export default function SelectionInspector({
         </h2>
       </div>
       <button
-        className="cursor-pointer rounded-[7px] border-0 bg-[#f4f4f8] p-1.5 text-[#777]"
+        className="cursor-pointer rounded-[7px] border-0 bg-[#f4f4f8] p-1.5 text-[#777] transition duration-200 hover:bg-[#ece9ff] hover:text-[#5b4cb9] active:scale-90"
         title="Close inspector"
         onClick={onClose}
       >
@@ -93,7 +93,7 @@ export default function SelectionInspector({
           {["x", "y", "z"].map((axis) => (
             <label
               key={axis}
-              className="flex h-8 min-w-0 items-center overflow-hidden rounded-[5px] border border-white/60 bg-white/35 backdrop-blur-sm"
+              className="inspector-input flex h-8 min-w-0 items-center overflow-hidden rounded-[5px] border border-white/60 bg-white/35 backdrop-blur-sm"
             >
               <small className="pl-[5px] text-[#a0a3ad]">{axis}</small>
               <input
@@ -109,7 +109,7 @@ export default function SelectionInspector({
               />
               <span className="flex h-full w-[17px] shrink-0 flex-col border-l border-[#eeeef3]">
                 <button
-                  className="grid flex-1 place-items-center border-0 bg-transparent p-0 text-[#777b89] hover:bg-[#f0edff] hover:text-[#6557c9]"
+                  className="inspector-stepper grid flex-1 place-items-center border-0 bg-transparent p-0 text-[#777b89] hover:bg-[#f0edff] hover:text-[#6557c9]"
                   type="button"
                   aria-label={`Increase ${label} ${axis}`}
                   onClick={() => {
@@ -121,7 +121,7 @@ export default function SelectionInspector({
                   <ChevronUp size={11} />
                 </button>
                 <button
-                  className="grid flex-1 place-items-center border-0 bg-transparent p-0 text-[#777b89] hover:bg-[#f0edff] hover:text-[#6557c9]"
+                  className="inspector-stepper grid flex-1 place-items-center border-0 bg-transparent p-0 text-[#777b89] hover:bg-[#f0edff] hover:text-[#6557c9]"
                   type="button"
                   aria-label={`Decrease ${label} ${axis}`}
                   onClick={() => {

@@ -1,15 +1,14 @@
-
-export const ButtonSecondary = ({label, onClick}) => {
+export const ButtonSecondary = ({ label, onClick }) => {
   return (
-    <button onClick={onClick} className="rounded-md bg-neutral-700 px-4 py-2 text-sm font-medium transition hover:bg-neutral-600" >
+    <button type="button" onClick={onClick} className="editor-button editor-button-secondary">
       {label}
     </button>
   )
 }
 
-export const ButtonPrimary = ({label, onClick}) => {
-  return (  
-    <button onClick={onClick} className="rounded-md bg-blue-600 px-4 py-2 text-xs font-medium transition hover:bg-blue-500">
+export const ButtonPrimary = ({ label, onClick }) => {
+  return (
+    <button type="button" onClick={onClick} className="editor-button editor-button-primary">
       {label}
     </button>
   )
