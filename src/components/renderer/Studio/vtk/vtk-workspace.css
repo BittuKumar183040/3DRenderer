@@ -225,7 +225,7 @@
 
 .vtk-toolbar {
   gap: 6px !important;
-  padding: 5px 6px !important;
+  padding: 0 6px !important;
   align-items: center;
 }
 

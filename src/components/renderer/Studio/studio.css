@@ -11,6 +11,7 @@
   --s-violet-deep: #5747c8;
   --s-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --s-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --s-bar-h: 40px;
   position: relative;
   height: 100vh;
   height: 100dvh;
@@ -43,7 +44,7 @@
   z-index: 40;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   pointer-events: none;
@@ -58,11 +59,12 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  height: var(--s-bar-h);
 }
 
 .studio-topbar-right {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-end;
   gap: 6px;
   max-width: 100%;
@@ -83,7 +85,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 42px;
+  height: var(--s-bar-h);
   padding: 0 11px 0 8px;
   border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 12px;
@@ -144,14 +146,14 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
-  max-width: 180px;
-  padding: 0 10px;
+  height: var(--s-bar-h);
+  max-width: 190px;
+  padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.75);
-  border-radius: 9px;
+  border-radius: 11px;
   background: rgba(255, 255, 255, 0.6);
   color: #5c606d;
-  font-size: 10.5px;
+  font-size: 11px;
   backdrop-filter: blur(10px);
 }
 
@@ -177,8 +179,10 @@
 
 .studio-panel-toggles {
   display: flex;
+  align-items: center;
   gap: 2px;
-  padding: 3px;
+  height: var(--s-bar-h);
+  padding: 4px;
   border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.74);
@@ -191,7 +195,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  height: 27px;
+  height: 100%;
   padding: 0 9px;
   border: 0;
   border-radius: 8px;
@@ -244,7 +248,8 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  padding: 6px 8px;
+  min-height: var(--s-bar-h);
+  padding: 0 7px;
   border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.76);
@@ -1422,6 +1427,10 @@
 }
 
 @media (max-width: 760px) {
+  .studio-shell {
+    --s-bar-h: 36px;
+  }
+
   .studio-topbar {
     top: calc(8px + env(safe-area-inset-top, 0px));
     left: 8px;
@@ -1440,12 +1449,11 @@
     flex: 1;
     min-width: 0;
     gap: 4px;
-    padding: 5px 6px;
+    padding: 0 5px;
     border-radius: 11px;
   }
 
   .studio-brand {
-    height: 38px;
     padding: 0 9px 0 6px;
     border-radius: 10px;
   }
@@ -1464,9 +1472,8 @@
   }
 
   .studio-doc {
-    height: 28px;
     max-width: 104px;
-    padding: 0 8px;
+    padding: 0 9px;
     font-size: 10px;
   }
 
@@ -1490,6 +1497,7 @@
     padding: 0 8px;
     font-size: 10.5px;
   }
+
 
   .studio-panel-left,
   .studio-panel-right {
