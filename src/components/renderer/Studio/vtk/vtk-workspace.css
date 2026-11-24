@@ -1,0 +1,551 @@
+.vtk-workspace {
+  background: radial-gradient(ellipse at 52% 46%, #f4f5f9 0%, #e9ebf1 68%, #e3e5ec 100%);
+}
+
+/* Sidebar content -------------------------------------------- */
+
+.vtk-workspace .vtk-sidebar {
+  width: 286px;
+}
+
+.vtk-workspace .vtk-sidebar .panel-body {
+  padding: 8px 10px 12px;
+}
+
+.vtk-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 29px;
+  margin-top: 3px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: #f0eeff;
+  color: #5548b0;
+  font-size: 10.5px;
+}
+
+.vtk-tree-row.child {
+  margin: 1px 0 11px 16px;
+  background: transparent;
+  color: #777b89;
+}
+
+.vtk-tree-row > i {
+  width: 2px;
+  height: 14px;
+  border-radius: 3px;
+  background: #9b8ded;
+}
+
+.vtk-tree-icon {
+  font-size: 12px;
+}
+
+.vtk-tree-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vtk-sidebar-section {
+  padding-top: 10px;
+  border-top: 1px solid #eeeef3;
+}
+
+/* Properties panel ------------------------------------------- */
+
+.vtk-gui {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vtk-group {
+  overflow: hidden;
+  border: 1px solid #ebeaf1;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.vtk-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: #3d4050;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s var(--s-ease), color 0.16s var(--s-ease);
+}
+
+.vtk-group-head:hover {
+  background: #faf9ff;
+  color: #5747c8;
+}
+
+.vtk-group-head svg {
+  color: #989ba6;
+  font-size: 12px;
+}
+
+.vtk-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px 10px;
+  border-top: 1px solid #f2f2f6;
+}
+
+.vtk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 8px;
+  color: #717583;
+  font-size: 9.5px;
+}
+
+.vtk-field select,
+.vtk-field input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #e6e6ed;
+  border-radius: 7px;
+  background: #f7f7fa;
+  color: #3d4050;
+  font-family: inherit;
+  font-size: 10px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.18s var(--s-ease), box-shadow 0.18s var(--s-ease),
+    background 0.18s var(--s-ease);
+}
+
+.vtk-field select:focus,
+.vtk-field input:focus {
+  border-color: #c6bdf2;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(113, 98, 232, 0.1);
+}
+
+.vtk-field-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vtk-field-inline input {
+  width: 82px;
+}
+
+.vtk-info-list {
+  margin: 0;
+  padding: 2px 10px 10px;
+  border-top: 1px solid #f2f2f6;
+}
+
+.vtk-info-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f4f4f8;
+  color: #777b89;
+  font-size: 9.5px;
+}
+
+.vtk-info-list > div:last-child {
+  border-bottom: 0;
+}
+
+.vtk-info-list dt {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vtk-info-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #444755;
+  font-weight: 600;
+  text-align: right;
+}
+
+.vtk-sidebar-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #ebeaf1;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.vtk-sidebar-metrics > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.vtk-sidebar-metrics b {
+  overflow-wrap: anywhere;
+  color: #404351;
+  font-size: 11px;
+}
+
+.vtk-sidebar-metrics small {
+  color: #9699a5;
+  font-size: 8px;
+  letter-spacing: 0.7px;
+}
+
+.vtk-sidebar-metrics .vtk-range-metric {
+  grid-column: 1 / -1;
+  padding-top: 7px;
+  border-top: 1px solid #eff0f3;
+}
+
+.vtk-sidebar-metrics .vtk-range-metric b {
+  font-size: 10px;
+}
+
+/* Toolbar chips ---------------------------------------------- */
+
+.vtk-toolbar {
+  gap: 6px !important;
+  padding: 5px 6px !important;
+  align-items: center;
+}
+
+.vtk-toolbar > div {
+  height: 32px !important;
+  min-height: 32px !important;
+  min-width: 32px !important;
+  padding: 4px !important;
+  border: 1px solid #ebeaf1 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.vtk-toolbar > div > svg {
+  width: 18px !important;
+  height: 18px !important;
+  padding: 0 !important;
+  color: #6f62c9;
+}
+
+.vtk-toolbar > div:nth-child(2) {
+  width: 70px !important;
+  gap: 3px !important;
+  padding: 2px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vtk-toolbar > div:nth-child(2) > svg {
+  width: 30px !important;
+  height: 30px !important;
+  padding: 6px !important;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.16s var(--s-ease), color 0.16s var(--s-ease);
+}
+
+.vtk-toolbar > div:nth-child(2) > svg:hover {
+  background: #f1effc;
+  color: #5747c8;
+}
+
+.vtk-toolbar .vtk-dimension-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto !important;
+  min-width: 72px !important;
+  padding: 0 9px !important;
+  color: #5e6170;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.vtk-dimension-chip p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.vtk-dimension-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5cc69b;
+  box-shadow: 0 0 0 3px rgba(92, 198, 155, 0.18);
+}
+
+/* Popovers inside the VTK toolbar ---------------------------- */
+
+.vtk-toolbar > div > div[class*='absolute'],
+.vtk-toolbar .absolute {
+  z-index: 70;
+}
+
+/* Color legend ----------------------------------------------- */
+
+.vtk-legend {
+  position: absolute;
+  z-index: 24;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  width: 196px;
+  min-height: 150px;
+  max-height: 78vh;
+  padding: 12px;
+  border: 1px solid #fff;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 38px rgba(32, 34, 56, 0.09);
+  backdrop-filter: blur(18px);
+  color: #333543;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;
+  transition: opacity 0.2s var(--s-ease), transform 0.24s var(--s-ease);
+}
+
+.vtk-legend-resize {
+  position: absolute;
+  top: -7px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8c8f9a;
+  cursor: ns-resize;
+}
+
+.vtk-legend-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #ececf1;
+}
+
+.vtk-legend-title span {
+  color: #858997;
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
+.vtk-legend-title b {
+  flex: 1;
+  color: #414451;
+  font-size: 10px;
+}
+
+.vtk-legend-close {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  background: #f4f4f8;
+  color: #7a7d8a;
+  cursor: pointer;
+  transition: background 0.16s var(--s-ease), color 0.16s var(--s-ease);
+}
+
+.vtk-legend-close:hover {
+  background: #ece9ff;
+  color: #5747c8;
+}
+
+.vtk-legend-content {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  gap: 9px;
+  min-height: 0;
+  padding: 10px 4px 2px;
+}
+
+.vtk-legend-values {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.vtk-legend-tick {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 10px;
+}
+
+.vtk-legend-tick span {
+  color: #434654;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vtk-legend-tick i {
+  flex: 1;
+  height: 1px;
+  background: #b7bac5;
+}
+
+.vtk-legend-ramp {
+  width: 22px;
+  flex: none;
+  border: 1px solid #d9dbe2;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.46);
+}
+
+/* Help popover ----------------------------------------------- */
+
+.vtk-info {
+  position: relative;
+  flex: none;
+}
+
+.vtk-info-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(32, 34, 55, 0.09);
+  color: #6a6e7c;
+  font-size: 17px;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  transition: background 0.18s var(--s-ease), color 0.18s var(--s-ease),
+    transform 0.2s var(--s-spring);
+}
+
+.vtk-info-btn:hover,
+.vtk-info-btn.is-open {
+  background: #fff;
+  color: #5747c8;
+  transform: translateY(-1px);
+}
+
+.vtk-info-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 70;
+  width: 156px;
+  padding: 9px 10px;
+  border: 1px solid #eae9f2;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 40px rgba(35, 30, 80, 0.16);
+  backdrop-filter: blur(18px);
+  color: #555867;
+  font-size: 10px;
+}
+
+.vtk-info-panel-head {
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f1f5;
+  color: #999daa;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.vtk-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #f6f6f9;
+}
+
+.vtk-info-row:last-child {
+  border-bottom: 0;
+}
+
+.vtk-info-row svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Responsive -------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .vtk-workspace .vtk-sidebar {
+    width: auto;
+  }
+
+  .vtk-toolbar {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .vtk-legend {
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: 148px;
+    max-height: min(52dvh, 320px);
+    padding: 9px;
+  }
+
+  .vtk-legend-content {
+    gap: 6px;
+    padding: 8px 0 2px;
+  }
+
+  .vtk-legend-tick {
+    gap: 5px;
+  }
+
+  .vtk-legend-ramp {
+    width: 16px;
+  }
+
+  .vtk-info-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  .vtk-workspace .studio-topbar-right {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+}
+
+@media (max-height: 620px) {
+  .vtk-legend {
+    max-height: 62dvh;
+  }
+}
