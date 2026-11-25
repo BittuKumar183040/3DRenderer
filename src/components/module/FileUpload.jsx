@@ -35,7 +35,7 @@ const DEMOS = [
   { key: "custom", label: "Shader playground", ext: "SHADER", kind: "Live shader", img: customShaderImg, color: "dark" },
 ];
 
-const FileUpload = ({ fileData }) => {
+const FileUpload = ({ fileData, onOpenStudio = () => {} }) => {
   const inputRef = useRef(null);
   const searchRef = useRef(null);
   const dragDepth = useRef(0);
@@ -144,6 +144,9 @@ const FileUpload = ({ fileData }) => {
         <span className="nav-muted">/ Local session</span>
       </div>
       <div className="nav-right">
+        <button className="nav-studio" type="button" onClick={onOpenStudio}>
+          <Box size={13} /> <span>Studio</span>
+        </button>
         <a className="nav-link" href="#library">Library <ArrowRight size={13} /></a>
         <span className="status-chip"><span /> Ready</span>
         <button className="nav-cta" type="button" onClick={openPicker}>
@@ -286,6 +289,8 @@ const FileUpload = ({ fileData }) => {
 
 FileUpload.propTypes = {
   fileData: PropTypes.func.isRequired,
+  onOpenStudio: PropTypes.func,
 };
+
 
 export default FileUpload;
