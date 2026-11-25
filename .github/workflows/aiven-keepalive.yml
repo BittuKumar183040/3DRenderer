@@ -1,0 +1,25 @@
+name: Aiven keep-alive
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"   # every 4 hours (UTC)
+  workflow_dispatch:         # lets you run it manually from the Actions tab
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Aiven PostgreSQL
+        env:
+          DATABASE_URL: ${{ secrets.AIVEN_DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE IF NOT EXISTS keepalive (
+            id INT PRIMARY KEY,
+            last_ping TIMESTAMPTZ NOT NULL
+          );
+          INSERT INTO keepalive (id, last_ping) VALUES (1, now())
+          ON CONFLICT (id) DO UPDATE SET last_ping = now();
+          SELECT last_ping FROM keepalive WHERE id = 1;
+          SQL
