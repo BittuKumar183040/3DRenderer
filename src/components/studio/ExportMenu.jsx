@@ -7,7 +7,7 @@ import { EXPORT_FORMATS, captureViewport, exportObjects } from "./exportScene";
  * Topbar export menu for the whole scene. Keeps the viewport screenshot here
  * too, so all file outputs live behind one Export button.
  */
-export default function ExportMenu({ models, onNotice }) {
+export default function ExportMenu({ models = [], objects: objectOverride, scopeLabel = "Scene", baseName = "studio-scene", onNotice }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState("");
   const ref = useRef(null);
@@ -28,7 +28,7 @@ export default function ExportMenu({ models, onNotice }) {
     };
   }, [open]);
 
-  const objects = models.map((model) => model.object).filter(Boolean);
+  const objects = (objectOverride || models.map((model) => model.object)).filter(Boolean);
   const canExport = objects.length > 0;
 
   const run = async (label, task) => {
@@ -66,7 +66,7 @@ export default function ExportMenu({ models, onNotice }) {
         role="menu"
       >
         <span className="view-label">
-          Scene{canExport ? ` · ${objects.length} object${objects.length > 1 ? "s" : ""}` : ""}
+          {scopeLabel}{canExport ? ` · ${objects.length} object${objects.length > 1 ? "s" : ""}` : ""}
         </span>
         <div className="studio-export-grid">
           {EXPORT_FORMATS.map((format) => (
@@ -77,7 +77,7 @@ export default function ExportMenu({ models, onNotice }) {
               title={format.title}
               disabled={!canExport || Boolean(busy)}
               onClick={() =>
-                run(format.id, () => exportObjects(objects, format.id, "studio-scene"))
+                run(format.id, () => exportObjects(objects, format.id, baseName))
               }
             >
               {busy === format.id ? <Loader2 size={12} className="is-spinning" /> : null}
@@ -110,6 +110,9 @@ export default function ExportMenu({ models, onNotice }) {
 }
 
 ExportMenu.propTypes = {
-  models: PropTypes.array.isRequired,
+  models: PropTypes.array,
+  objects: PropTypes.array,
+  scopeLabel: PropTypes.string,
+  baseName: PropTypes.string,
   onNotice: PropTypes.func,
 };

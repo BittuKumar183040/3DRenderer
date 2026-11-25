@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Layers3, SlidersHorizontal, UploadCloud } from "lucide-react";
+import { Layers3, Plus, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 import ViewerBrand from "../renderer/Studio/shell/ViewerBrand";
 import ViewerToolbar from "../renderer/Studio/shell/ViewerToolbar";
 import LoadingOverlay from "../renderer/Studio/shell/LoadingOverlay";
@@ -70,6 +70,8 @@ export default function StudioPage({ onExit }) {
   const [cameraView, setCameraView] = useState({ dir: "iso", n: 0 });
   const [cursor, setCursor] = useState([0, 0, 0]);
   const [cursorHold, setCursorHold] = useState(false);
+  const [meshMenuOpen, setMeshMenuOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem("studio-welcome-dismissed") !== "1");
   const [transformMode, setTransformMode] = useState("translate");
   const [view, setView] = useState({
     grid: true,
@@ -89,6 +91,7 @@ export default function StudioPage({ onExit }) {
   const fileInputRef = useRef(null);
   const topbarRef = useRef(null);
   const cursorRef = useRef(cursor);
+  const cursorHoldTimer = useRef(0);
   const cursorApi = useRef(null);
   const focusApi = useRef(null);
   const [topbarHeight, setTopbarHeight] = useState(64);
@@ -147,31 +150,17 @@ export default function StudioPage({ onExit }) {
     [urls]
   );
 
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-      const key = event.key.toLowerCase();
-      if (key === "g") setTransformMode("translate");
-      else if (key === "r") setTransformMode("rotate");
-      else if (key === "s") setTransformMode("scale");
-      else if (key === "escape") setSelected(null);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+  const placeCursor = useCallback((position) => setCursor(position), []);
+  const handleCursorHold = useCallback((holding) => {
+    window.clearTimeout(cursorHoldTimer.current);
+    if (holding) {
+      cursorHoldTimer.current = window.setTimeout(() => setCursorHold(true), 180);
+    } else {
+      setCursorHold(false);
+    }
   }, []);
 
-  const placeCursor = useCallback((position) => setCursor(position), []);
-  const handleCursorHold = useCallback((holding) => setCursorHold(holding), []);
+  useEffect(() => () => window.clearTimeout(cursorHoldTimer.current), []);
 
   const addModels = useCallback((entries) => {
     if (!entries.length) return;
@@ -192,6 +181,11 @@ export default function StudioPage({ onExit }) {
     setFitKey((value) => value + 1);
     setNotice("");
   }, []);
+
+  const insertPrimitive = useCallback((kind) => {
+    const labels = { box: "Cube", sphere: "Sphere", cone: "Cone", cylinder: "Cylinder", torus: "Torus", plane: "Plane" };
+    addModels([{ name: labels[kind], ext: "primitive", format: "MESH", primitive: kind, source: "primitive" }]);
+  }, [addModels]);
 
   const addFiles = useCallback(
     (files) => {
@@ -288,6 +282,27 @@ export default function StudioPage({ onExit }) {
       return current;
     });
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
+      const key = event.key.toLowerCase();
+      if (key === "g") setTransformMode("translate");
+      else if (key === "r") setTransformMode("rotate");
+      else if (key === "s") setTransformMode("scale");
+      else if (key === "escape") setSelected(null);
+      else if ((key === "delete" || key === "backspace") && selected) {
+        for (let node = selected; node; node = node.parent) {
+          const modelId = node.userData?.studioModelId;
+          if (modelId) { event.preventDefault(); removeModel(modelId); return; }
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selected, removeModel]);
 
   const toggleView = (key) =>
     setView((current) => ({ ...current, [key]: !current[key] }));
@@ -395,11 +410,12 @@ export default function StudioPage({ onExit }) {
         />
       </div>
 
-      {models.length === 0 && (
+      {models.length === 0 && showWelcome && (
         <div className="studio-empty">
           <div className="studio-empty-card">
-            <span className="studio-empty-badge">Blank canvas</span>
-            <h1>Start your scene</h1>
+            <button type="button" className="studio-welcome-close" aria-label="Continue with blank canvas" title="Continue with blank canvas" onClick={() => { localStorage.setItem("studio-welcome-dismissed", "1"); setShowWelcome(false); }}><X size={16} /></button>
+            <span className="studio-empty-badge">Studio library</span>
+            <h1>Pick from the library</h1>
             <p>
               Drop a 3D model anywhere, or insert one from the library. New models
               appear at the 3D cursor. Everything stays on your device.
@@ -408,13 +424,7 @@ export default function StudioPage({ onExit }) {
               <button type="button" className="st-btn is-primary" onClick={openPicker}>
                 <UploadCloud size={14} /> Upload model
               </button>
-              <button
-                type="button"
-                className="st-btn"
-                onClick={() => insertLibrary(STUDIO_LIBRARY[0])}
-              >
-                Insert a sample
-              </button>
+              {STUDIO_LIBRARY.map((item) => <button key={item.key} type="button" className="st-btn" onClick={() => insertLibrary(item)}>{item.name}</button>)}
             </div>
             <small>{MODEL_LABEL}</small>
           </div>
@@ -465,7 +475,12 @@ export default function StudioPage({ onExit }) {
             onToView={cursorToView}
             onToggleVisible={() => toggleView("cursor")}
           />
-          <ExportMenu models={models} onNotice={setNotice} />
+          <div className="view-menu studio-add-menu">
+            <button type="button" className={`st-view-trigger${meshMenuOpen ? " is-open" : ""}`} aria-expanded={meshMenuOpen} aria-haspopup="menu" aria-label="Add mesh" title="Add mesh" onClick={() => setMeshMenuOpen((open) => !open)}><Plus size={14}/><span>Add mesh</span></button>
+            <div className={`view-popover studio-add-popover${meshMenuOpen ? " is-open" : ""}`} role="menu">
+              {[ ["box", "Cube"], ["sphere", "Sphere"], ["cone", "Cone"], ["cylinder", "Cylinder"], ["torus", "Torus"], ["plane", "Plane"] ].map(([kind, label]) => <button key={kind} type="button" role="menuitem" onClick={() => { insertPrimitive(kind); setMeshMenuOpen(false); }}>{label}</button>)}
+            </div>
+          </div>
           <ViewerToolbar
             meshItems={models.map((model) => model.object).filter(Boolean)}
             brightness={brightness}
@@ -477,6 +492,7 @@ export default function StudioPage({ onExit }) {
             canIsolate={Boolean(selected)}
             onCameraView={(dir) => setCameraView((current) => ({ dir, n: current.n + 1 }))}
           />
+          <ExportMenu models={models} onNotice={setNotice} />
         </div>
       </div>
 
@@ -500,6 +516,7 @@ export default function StudioPage({ onExit }) {
           root={sceneRoot}
           focusApi={focusApi}
           onNotice={setNotice}
+          onRemove={() => { for (let node = selected; node; node = node.parent) { const id = node.userData?.studioModelId; if (id) { removeModel(id); break; } } }}
           onClose={() => setInspectorOpen(false)}
         />
       )}

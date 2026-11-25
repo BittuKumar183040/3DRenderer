@@ -13,11 +13,10 @@ import {
   Focus,
   ImagePlus,
   Layers3,
-  Loader2,
   Trash2,
   X,
 } from "lucide-react";
-import { EXPORT_FORMATS, exportObjects } from "./exportScene";
+import ExportMenu from "./ExportMenu";
 
 const number = (value) => Number(Number(value).toFixed(2));
 
@@ -34,10 +33,10 @@ export default function SelectionPanel({
   focusApi,
   onClose,
   onNotice,
+  onRemove,
 }) {
   const [, refresh] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
-  const [busy, setBusy] = useState("");
   const [textureUrl, setTextureUrl] = useState("");
   const textureFile = useRef(null);
   const customTexture = useRef(null);
@@ -72,8 +71,13 @@ export default function SelectionPanel({
   const materials = [...found];
 
   const material = materials[0];
-  const map = material?.map;
+  const textureMaterial = materials.find((item) => item.map?.image) || material;
+  const map = textureMaterial?.map;
   const mapSource = map?.image?.src || "";
+  const hasTexture = materials.some((item) => {
+    const image = item.map?.image;
+    return Boolean(image && (image.naturalWidth || image.videoWidth || image.width) && (image.naturalHeight || image.videoHeight || image.height));
+  });
 
   const details = useMemo(() => {
     const chain = [];
@@ -152,23 +156,6 @@ export default function SelectionPanel({
         onNotice?.("Could not read that image.");
       }
     );
-  };
-
-  const runExport = async (format) => {
-    if (busy) return;
-    setBusy(format);
-    try {
-      const filename = await exportObjects(
-        [object],
-        format,
-        object.name || "selection"
-      );
-      onNotice?.(`Saved ${filename}`);
-    } catch (error) {
-      onNotice?.(`Export failed — ${error.message}`);
-    } finally {
-      setBusy("");
-    }
   };
 
   const name = object.name || object.type || "Object";
@@ -273,15 +260,10 @@ export default function SelectionPanel({
               {object.visible ? <Eye size={13} /> : <EyeOff size={13} />}
               {object.visible ? "Hide" : "Show"}
             </button>
+            <button type="button" className="is-danger" onClick={onRemove} title="Remove this object from the scene"><Trash2 size={13} /> Delete</button>
           </div>
-          <div className="inspector-grid">
-            <span>Type</span>
-            <b>{object.type}</b>
-            <span>UUID</span>
-            <code>{object.uuid.slice(0, 12)}…</code>
-            <span>Meshes</span>
-            <b>{meshes.length}</b>
-          </div>
+          <div className="inspector-summary"><span>Type <b>{object.type}</b></span><span>Meshes <b>{meshes.length}</b></span></div>
+          <details className="inspector-more"><summary>More details</summary><div className="inspector-grid"><span>UUID</span><code>{object.uuid.slice(0, 12)}…</code><span>Visible</span><b>{object.visible ? "Yes" : "No"}</b><span>Children</span><b>{object.children?.length || 0}</b></div></details>
         </section>
 
         <section className="inspector-section">
@@ -357,6 +339,13 @@ export default function SelectionPanel({
         {material && (
           <section className="inspector-section">
             <h3>Material</h3>
+            <label className="inspector-material-preset">Apply preset
+              <select value="" onChange={(event) => {
+                const presets = { Clay: { color: "#bf7658", roughness: 0.82, metalness: 0.02 }, Ceramic: { color: "#e5e0d6", roughness: 0.24, metalness: 0 }, Metal: { color: "#aeb8c8", roughness: 0.28, metalness: 0.9 }, Rubber: { color: "#34343b", roughness: 0.96, metalness: 0 }, Glass: { color: "#a8d8e8", roughness: 0.08, metalness: 0, transparent: true, opacity: 0.38 } };
+                const preset = presets[event.target.value];
+                if (preset) editMaterial((item) => { const { color, ...properties } = preset; Object.assign(item, properties); if (color) item.color?.set(color); });
+              }}><option value="">Choose material…</option><option>Clay</option><option>Ceramic</option><option>Metal</option><option>Rubber</option><option>Glass</option></select>
+            </label>
             <div className="inspector-material">
               <input
                 type="color"
@@ -467,6 +456,21 @@ export default function SelectionPanel({
                 <Trash2 size={13} /> Remove
               </button>
             )}
+            <button type="button" disabled={!hasTexture} onClick={async () => {
+              try {
+                const image = materials.find((item) => item.map?.image)?.map.image;
+                if (!image) throw new Error("No texture is available");
+                const canvas = document.createElement("canvas");
+                canvas.width = image.naturalWidth || image.videoWidth || image.width;
+                canvas.height = image.naturalHeight || image.videoHeight || image.height;
+                if (!canvas.width || !canvas.height) throw new Error("Texture image is not ready");
+                canvas.getContext("2d").drawImage(image, 0, 0);
+                const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Could not encode the texture")), "image/png"));
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a"); link.href = url; link.download = `${name.replace(/[^\w-]+/g, "-")}-texture.png`; link.click();
+                window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+              } catch (error) { onNotice?.(`Texture download failed — ${error.message}`); }
+            }} title={hasTexture ? "Download the selected texture" : "No texture to download"}><Download size={13} /> Download</button>
           </div>
           <input
             ref={textureFile}
@@ -480,31 +484,11 @@ export default function SelectionPanel({
           />
         </section>
 
-        <section className="inspector-section inspector-export">
-          <h3>Export selection</h3>
-          <div className="studio-export-grid">
-            {EXPORT_FORMATS.map((format) => (
-              <button
-                key={format.id}
-                type="button"
-                title={`${format.title} — ${name}`}
-                disabled={Boolean(busy)}
-                onClick={() => runExport(format.id)}
-              >
-                {busy === format.id ? <Loader2 size={12} className="is-spinning" /> : null}
-                {format.label}
-              </button>
-            ))}
-          </div>
-          <p className="studio-export-note">Only this object is written to the file.</p>
-        </section>
+        <section className="inspector-section inspector-export"><h3>Export</h3><ExportMenu objects={[object]} scopeLabel="Selection" baseName={name} onNotice={onNotice} /></section>
 
         <div className="inspector-hint">
           <Box size={13} /> Click a mesh in the viewport to inspect it · Esc clears
           the selection
-        </div>
-        <div className="inspector-hint">
-          <Download size={13} /> Exports download straight to your device
         </div>
       </div>
     </aside>
@@ -518,4 +502,5 @@ SelectionPanel.propTypes = {
   focusApi: PropTypes.shape({ current: PropTypes.any }),
   onClose: PropTypes.func.isRequired,
   onNotice: PropTypes.func,
+  onRemove: PropTypes.func.isRequired,
 };
