@@ -185,7 +185,7 @@ export default function ModelSidebar({
                 <LuBox />
               </span>
               <span className="tree-label">{model.name}</span>
-              <small>loading…</small>
+              <small>{model.failed ? "failed" : "loading…"}</small>
             </div>
           )
         )}

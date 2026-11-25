@@ -8,7 +8,16 @@ import LoadingOverlay from "../renderer/Studio/shell/LoadingOverlay";
 import useMediaQuery from "../renderer/Studio/shell/useMediaQuery";
 import StudioCanvas from "./StudioCanvas";
 import ModelSidebar from "./ModelSidebar";
+import CursorMenu from "./CursorMenu";
+import TransformBar from "./TransformBar";
 import STUDIO_LIBRARY from "./library";
+import {
+  MODEL_ACCEPT,
+  MODEL_LABEL,
+  formatOf,
+  isSupportedModel,
+  releaseModel,
+} from "./loadModel";
 import "../renderer/Studio/studio.css";
 import "./studio-page.css";
 
@@ -19,19 +28,35 @@ const nextId = () => {
   return `model-${Date.now()}-${uid}`;
 };
 
-const MODEL_ACCEPT = ".glb,.gltf,model/gltf-binary,model/gltf+json";
+const roundPoint = (value) => Math.round(value * 100) / 100;
 
-/** New models are laid out on a widening spiral so they never stack. */
-function slotPosition(slot) {
-  if (!slot) return [0, 0, 0];
-  const angle = slot * 2.399963;
-  const radius = 4.6 * Math.sqrt(slot);
-  return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius];
+/**
+ * First free spot around the 3D cursor: exactly on it when nothing is there,
+ * otherwise a widening spiral so repeated inserts never stack.
+ */
+function freeSpotNear(cursor, positions) {
+  for (let slot = 0; slot < 64; slot += 1) {
+    const radius = slot === 0 ? 0 : 4.2 * Math.sqrt(slot);
+    const angle = slot * 2.399963;
+    const point = [
+      cursor[0] + Math.cos(angle) * radius,
+      cursor[1],
+      cursor[2] + Math.sin(angle) * radius,
+    ];
+    const free = positions.every(
+      (position) =>
+        Math.hypot(position[0] - point[0], position[2] - point[2]) > 2.4 ||
+        Math.abs(position[1] - point[1]) > 0.8
+    );
+    if (free) return point;
+  }
+  return [...cursor];
 }
 
 /**
- * Blank-canvas studio: insert any number of GLB/GLTF models, compose them on
- * a grid, inspect and edit them, then capture the viewport.
+ * Blank-canvas studio: insert models (glTF, FBX, OBJ, STL, PLY, SVG) onto a
+ * grid, position them at the 3D cursor, transform the selection with the
+ * viewport gizmo, inspect them, then capture the viewport.
  */
 export default function StudioPage({ onExit }) {
   const compact = useMediaQuery("(max-width: 760px)");
@@ -42,11 +67,15 @@ export default function StudioPage({ onExit }) {
   const [brightness, setBrightness] = useState(2);
   const [fitKey, setFitKey] = useState(0);
   const [cameraView, setCameraView] = useState({ dir: "iso", n: 0 });
+  const [cursor, setCursor] = useState([0, 0, 0]);
+  const [cursorHold, setCursorHold] = useState(false);
+  const [transformMode, setTransformMode] = useState("translate");
   const [view, setView] = useState({
     grid: true,
     isolate: false,
     wireframe: false,
     autoRotate: false,
+    cursor: true,
   });
 
   const [sceneOpen, setSceneOpen] = useState(!compact);
@@ -54,14 +83,19 @@ export default function StudioPage({ onExit }) {
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState("");
 
-  const slotRef = useRef(0);
   const dragDepth = useRef(0);
   const uploadedUrls = useRef(new Set());
   const fileInputRef = useRef(null);
   const topbarRef = useRef(null);
+  const cursorRef = useRef(cursor);
+  const cursorApi = useRef(null);
   const [topbarHeight, setTopbarHeight] = useState(64);
 
   const readyKey = models.map((model) => (model.object ? "1" : "0")).join("");
+
+  useEffect(() => {
+    cursorRef.current = cursor;
+  }, [cursor]);
 
   useEffect(() => {
     setSceneOpen(!compact);
@@ -111,23 +145,48 @@ export default function StudioPage({ onExit }) {
     [urls]
   );
 
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "g") setTransformMode("translate");
+      else if (key === "r") setTransformMode("rotate");
+      else if (key === "s") setTransformMode("scale");
+      else if (key === "escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const placeCursor = useCallback((position) => setCursor(position), []);
+  const handleCursorHold = useCallback((holding) => setCursorHold(holding), []);
+
   const addModels = useCallback((entries) => {
     if (!entries.length) return;
-    setModels((prev) => [
-      ...prev,
-      ...entries.map((entry) => {
-        const slot = slotRef.current;
-        slotRef.current += 1;
-        return {
-          ...entry,
-          id: nextId(),
-          slot,
-          position: slotPosition(slot),
-          object: null,
-          visible: true,
-        };
-      }),
-    ]);
+    const point = cursorRef.current;
+    setModels((prev) => {
+      const placed = [...prev];
+      const additions = entries.map((entry) => {
+        const position = freeSpotNear(
+          point,
+          placed.map((model) => model.position)
+        );
+        const model = { ...entry, id: nextId(), position, object: null, visible: true };
+        placed.push(model);
+        return model;
+      });
+      return [...prev, ...additions];
+    });
     setFitKey((value) => value + 1);
     setNotice("");
   }, []);
@@ -135,15 +194,16 @@ export default function StudioPage({ onExit }) {
   const addFiles = useCallback(
     (files) => {
       if (!files?.length) return;
-      const accepted = files.filter((file) => /\.(glb|gltf)$/i.test(file.name));
+      const accepted = files.filter((file) => isSupportedModel(file.name));
       const entries = accepted.map((file) => {
         const url = URL.createObjectURL(file);
         uploadedUrls.current.add(url);
-        const format = file.name.split(".").pop().toLowerCase();
+        const ext = formatOf(file.name);
         return {
           name: file.name.replace(/\.[^.]+$/, ""),
           url,
-          format: format.toUpperCase(),
+          ext,
+          format: ext.toUpperCase(),
           source: "upload",
         };
       });
@@ -152,7 +212,7 @@ export default function StudioPage({ onExit }) {
         setSelected(null);
       }
       if (accepted.length !== files.length) {
-        setNotice("Only GLB and GLTF models can be added to the studio.");
+        setNotice(`Unsupported file format. Add ${MODEL_LABEL} models.`);
       }
     },
     [addModels]
@@ -161,7 +221,13 @@ export default function StudioPage({ onExit }) {
   const insertLibrary = useCallback(
     (item) => {
       addModels([
-        { name: item.name, url: item.url, format: item.format, source: "library" },
+        {
+          name: item.name,
+          url: item.url,
+          ext: item.ext || item.format.toLowerCase(),
+          format: item.format,
+          source: "library",
+        },
       ]);
     },
     [addModels]
@@ -182,6 +248,15 @@ export default function StudioPage({ onExit }) {
     });
   }, []);
 
+  const handleError = useCallback((id, name, message) => {
+    setModels((prev) =>
+      prev.map((model) =>
+        model.id === id ? { ...model, failed: true, object: null } : model
+      )
+    );
+    setNotice(`Could not load “${name}”${message ? ` — ${message}` : ""}.`);
+  }, []);
+
   const toggleModel = useCallback((id) => {
     setModels((prev) =>
       prev.map((model) => {
@@ -198,6 +273,7 @@ export default function StudioPage({ onExit }) {
       if (!target) return prev;
       if (target.source === "upload") {
         uploadedUrls.current.delete(target.url);
+        releaseModel(target.url, target.ext);
         window.setTimeout(() => URL.revokeObjectURL(target.url), 0);
       }
       return prev.filter((model) => model.id !== id);
@@ -233,6 +309,25 @@ export default function StudioPage({ onExit }) {
     setCameraView((current) => ({ dir: "iso", n: current.n + 1 }));
     setFitKey((value) => value + 1);
   };
+
+  const resetCursor = useCallback(() => setCursor([0, 0, 0]), []);
+
+  const cursorToSelection = useCallback(() => {
+    if (!selected) return;
+    selected.updateWorldMatrix?.(true, false);
+    const { elements } = selected.matrixWorld;
+    setCursor([
+      roundPoint(elements[12]),
+      roundPoint(elements[13]),
+      roundPoint(elements[14]),
+    ]);
+  }, [selected]);
+
+  const cursorToView = useCallback(() => {
+    const center = cursorApi.current?.center?.();
+    if (!center) return;
+    setCursor(center.map(roundPoint));
+  }, []);
 
   const openPicker = () => fileInputRef.current?.click();
 
@@ -280,14 +375,20 @@ export default function StudioPage({ onExit }) {
           sceneRoot={sceneRoot}
           brightness={brightness}
           view={view}
+          cursor={cursor}
           cameraView={cameraView}
           fitKey={fitKey}
           readyKey={readyKey}
           selected={selected}
+          transformMode={transformMode}
+          cursorApi={cursorApi}
           onSelect={setSelected}
           onReady={handleReady}
           onDetach={handleDetach}
+          onError={handleError}
           onScene={setSceneRoot}
+          onPlaceCursor={placeCursor}
+          onCursorHold={handleCursorHold}
         />
       </div>
 
@@ -297,8 +398,8 @@ export default function StudioPage({ onExit }) {
             <span className="studio-empty-badge">Blank canvas</span>
             <h1>Start your scene</h1>
             <p>
-              Drop a GLB or GLTF model anywhere, or insert one from the library.
-              Everything stays on your device.
+              Drop a 3D model anywhere, or insert one from the library. New models
+              appear at the 3D cursor. Everything stays on your device.
             </p>
             <div className="studio-empty-actions">
               <button type="button" className="st-btn is-primary" onClick={openPicker}>
@@ -312,7 +413,7 @@ export default function StudioPage({ onExit }) {
                 Insert a sample
               </button>
             </div>
-            <small>GLB · GLTF</small>
+            <small>{MODEL_LABEL}</small>
           </div>
         </div>
       )}
@@ -351,6 +452,16 @@ export default function StudioPage({ onExit }) {
           </div>
         </div>
         <div className="studio-topbar-right">
+          <TransformBar mode={transformMode} onChange={setTransformMode} />
+          <CursorMenu
+            cursor={cursor}
+            visible={view.cursor}
+            canSnap={Boolean(selected)}
+            onReset={resetCursor}
+            onToSelection={cursorToSelection}
+            onToView={cursorToView}
+            onToggleVisible={() => toggleView("cursor")}
+          />
           <ViewerToolbar
             meshItems={models.map((model) => model.object).filter(Boolean)}
             brightness={brightness}
@@ -410,8 +521,15 @@ export default function StudioPage({ onExit }) {
           <div>
             <UploadCloud size={28} />
             <strong>Drop to add models</strong>
-            <small>GLB · GLTF</small>
+            <small>{MODEL_LABEL}</small>
           </div>
+        </div>
+      )}
+
+      {cursorHold && (
+        <div className="studio-cursor-hold" role="status">
+          <i aria-hidden="true" />
+          <span>Hold to place the 3D cursor…</span>
         </div>
       )}
 

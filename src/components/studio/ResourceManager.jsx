@@ -71,7 +71,7 @@ export default function ResourceManager({
         <LuUpload size={15} />
         <span>
           <b>Upload model</b>
-          <small>Drop GLB / GLTF or browse</small>
+          <small>GLB · GLTF · FBX · OBJ · STL · PLY · SVG</small>
         </span>
       </button>
 

@@ -1,49 +1,47 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { useGLTF } from "@react-three/drei";
-import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
-
-const TARGET_SIZE = 3.6;
+import { loadModel, normalizeModel } from "./loadModel";
 
 /**
- * One model placed on the studio canvas. The glTF scene is cloned so the same
- * source can be inserted several times, then normalized to the same size and
- * rested on the ground plane.
+ * One model placed on the studio canvas. The source is cloned per insertion,
+ * normalized to the same size, rested on the ground plane, and registered with
+ * the page so panels, isolation and the gizmo can reach it. Supports every
+ * format handled by loadModel (glTF, FBX, OBJ, STL, PLY, SVG).
  */
-export default function ModelInstance({ model, position, onReady, onDetach, onSelect }) {
-  const { scene } = useGLTF(model.url);
+export default function ModelInstance({
+  model,
+  position,
+  onReady,
+  onDetach,
+  onSelect,
+  onError,
+}) {
   const groupRef = useRef(null);
+  const [object, setObject] = useState(null);
 
-  const object = useMemo(() => cloneSkeleton(scene), [scene]);
-
-  useLayoutEffect(() => {
-    object.position.set(0, 0, 0);
-    object.rotation.set(0, 0, 0);
-    object.scale.setScalar(1);
-    object.updateMatrixWorld(true);
-
-    const initial = new THREE.Box3().setFromObject(object);
-    const size = initial.getSize(new THREE.Vector3());
-    const max = Math.max(size.x, size.y, size.z) || 1;
-    object.scale.setScalar(TARGET_SIZE / max);
-    object.updateMatrixWorld(true);
-
-    const fitted = new THREE.Box3().setFromObject(object);
-    object.position.set(
-      -(fitted.min.x + fitted.max.x) / 2,
-      -fitted.min.y,
-      -(fitted.min.z + fitted.max.z) / 2
-    );
-    object.updateMatrixWorld(true);
-  }, [object]);
+  useEffect(() => {
+    let active = true;
+    setObject(null);
+    loadModel(model.url, model.ext)
+      .then((root) => {
+        if (!active) return;
+        setObject(normalizeModel(cloneSkeleton(root)));
+      })
+      .catch((error) => {
+        if (active) onError(model.id, model.name, error?.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [model.url, model.ext, model.id, model.name, onError]);
 
   useEffect(() => {
     const group = groupRef.current;
-    if (!group) return undefined;
+    if (!group || !object) return undefined;
     onReady(model.id, group);
     return () => onDetach(model.id);
-  }, [model.id, onReady, onDetach]);
+  }, [object, model.id, onReady, onDetach]);
 
   return (
     <group
@@ -56,7 +54,7 @@ export default function ModelInstance({ model, position, onReady, onDetach, onSe
         onSelect(event.object);
       }}
     >
-      <primitive object={object} />
+      {object && <primitive object={object} />}
     </group>
   );
 }
@@ -66,9 +64,11 @@ ModelInstance.propTypes = {
     id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
     url: PropTypes.string.isRequired,
+    ext: PropTypes.string.isRequired,
   }).isRequired,
   position: PropTypes.arrayOf(PropTypes.number).isRequired,
   onReady: PropTypes.func.isRequired,
   onDetach: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
+  onError: PropTypes.func.isRequired,
 };
