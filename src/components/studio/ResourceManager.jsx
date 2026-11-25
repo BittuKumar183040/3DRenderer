@@ -3,10 +3,11 @@ import PropTypes from "prop-types";
 import { X } from "lucide-react";
 import { LuBox, LuUpload } from "react-icons/lu";
 import STUDIO_LIBRARY from "./library";
+import { PRIMITIVES } from "./primitives";
 
 /**
- * Resource Manager docked under the scene tree: insert a built-in model or
- * upload GLB/GLTF files. Uploads never leave the browser.
+ * Resource Manager docked under the scene tree: insert a built-in model, add a
+ * basic mesh, or upload GLB/GLTF files. Uploads never leave the browser.
  */
 export default function ResourceManager({
   models,
@@ -15,6 +16,7 @@ export default function ResourceManager({
   onToggle,
   onRemove,
   onInsert,
+  onPrimitive,
   onFiles,
   onPick,
 }) {
@@ -81,6 +83,17 @@ export default function ResourceManager({
           {STUDIO_LIBRARY.map((item) => (
             <button key={item.key} type="button" onClick={() => onInsert(item)}>
               {item.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="resource-library">
+        <span className="resource-kicker">Add mesh</span>
+        <div className="resource-library-row">
+          {PRIMITIVES.map((item) => (
+            <button key={item.key} type="button" onClick={() => onPrimitive(item)}>
+              {item.label}
             </button>
           ))}
         </div>
@@ -164,6 +177,7 @@ ResourceManager.propTypes = {
   onToggle: PropTypes.func.isRequired,
   onRemove: PropTypes.func.isRequired,
   onInsert: PropTypes.func.isRequired,
+  onPrimitive: PropTypes.func.isRequired,
   onFiles: PropTypes.func.isRequired,
   onPick: PropTypes.func.isRequired,
 };

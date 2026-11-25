@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { createPrimitive } from "./primitives";
 import { loadModel, normalizeModel } from "./loadModel";
 
 /**
- * One model placed on the studio canvas. The source is cloned per insertion,
- * normalized to the same size, rested on the ground plane, and registered with
- * the page so panels, isolation and the gizmo can reach it. Supports every
- * format handled by loadModel (glTF, FBX, OBJ, STL, PLY, SVG).
+ * One model placed on the studio canvas — either a loaded file or a built-in
+ * primitive. File sources are cloned per insertion, normalized to the same
+ * size and rested on the ground plane; primitives are built on demand.
  */
 export default function ModelInstance({
   model,
@@ -23,6 +23,12 @@ export default function ModelInstance({
   useEffect(() => {
     let active = true;
     setObject(null);
+    if (model.primitive) {
+      setObject(createPrimitive(model.primitive));
+      return () => {
+        active = false;
+      };
+    }
     loadModel(model.url, model.ext)
       .then((root) => {
         if (!active) return;
@@ -34,7 +40,7 @@ export default function ModelInstance({
     return () => {
       active = false;
     };
-  }, [model.url, model.ext, model.id, model.name, onError]);
+  }, [model.url, model.ext, model.primitive, model.id, model.name, onError]);
 
   useEffect(() => {
     const group = groupRef.current;
@@ -63,8 +69,9 @@ ModelInstance.propTypes = {
   model: PropTypes.shape({
     id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
-    url: PropTypes.string.isRequired,
-    ext: PropTypes.string.isRequired,
+    url: PropTypes.string,
+    ext: PropTypes.string,
+    primitive: PropTypes.string,
   }).isRequired,
   position: PropTypes.arrayOf(PropTypes.number).isRequired,
   onReady: PropTypes.func.isRequired,

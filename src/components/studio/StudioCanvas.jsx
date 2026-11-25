@@ -95,7 +95,11 @@ function CursorPointer({ objects, enabled, onPlace, onHold }) {
     const pointer = new THREE.Vector2();
     const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const holdMs = 3000;
+    // The hold hint waits a moment so it does not flash while the user is
+    // just orbiting or dragging in the viewport.
+    const hintDelayMs = 650;
     let holdTimer = 0;
+    let hintTimer = 0;
     let holdStart = null;
     let holdPoint = null;
     let rightStart = null;
@@ -123,7 +127,9 @@ function CursorPointer({ objects, enabled, onPlace, onHold }) {
 
     const stopHold = () => {
       if (holdTimer) window.clearTimeout(holdTimer);
+      if (hintTimer) window.clearTimeout(hintTimer);
       holdTimer = 0;
+      hintTimer = 0;
       holdStart = null;
       holdPoint = null;
       onHold(false);
@@ -137,7 +143,7 @@ function CursorPointer({ objects, enabled, onPlace, onHold }) {
       if (event.button !== 0) return;
       holdStart = { x: event.clientX, y: event.clientY };
       holdPoint = { clientX: event.clientX, clientY: event.clientY };
-      onHold(true);
+      hintTimer = window.setTimeout(() => onHold(true), hintDelayMs);
       holdTimer = window.setTimeout(() => {
         const point = pointAt(holdPoint);
         stopHold();

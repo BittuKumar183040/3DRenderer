@@ -19,7 +19,7 @@ export const EXPORT_FORMATS = [
 
 const SLUG = /[^a-z0-9-_]+/gi;
 
-const slug = (name) => {
+export const slug = (name) => {
   const value = String(name || "studio")
     .replace(/\.[^.]+$/, "")
     .replace(SLUG, "-")
@@ -28,7 +28,8 @@ const slug = (name) => {
   return value || "studio";
 };
 
-function download(blob, filename) {
+/** Saves a blob as a file through a temporary anchor. */
+export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.download = filename;
@@ -101,7 +102,7 @@ export async function exportObjects(objects, format, name = "studio") {
   }
 
   const filename = `${base}.${extension}`;
-  download(blob, filename);
+  downloadBlob(blob, filename);
   return filename;
 }
 
@@ -118,7 +119,7 @@ export function captureViewport(name = "studio") {
         return;
       }
       const filename = `${slug(name)}-view.png`;
-      download(blob, filename);
+      downloadBlob(blob, filename);
       resolve(filename);
     }, "image/png");
   });

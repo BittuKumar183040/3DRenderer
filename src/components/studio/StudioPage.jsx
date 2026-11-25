@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Layers3, SlidersHorizontal, UploadCloud } from "lucide-react";
+import { Layers3, Library, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 import ViewerBrand from "../renderer/Studio/shell/ViewerBrand";
 import ViewerToolbar from "../renderer/Studio/shell/ViewerToolbar";
 import LoadingOverlay from "../renderer/Studio/shell/LoadingOverlay";
@@ -12,6 +12,7 @@ import TransformBar from "./TransformBar";
 import ExportMenu from "./ExportMenu";
 import SelectionPanel from "./SelectionPanel";
 import STUDIO_LIBRARY from "./library";
+import { PRIMITIVES } from "./primitives";
 import {
   MODEL_ACCEPT,
   MODEL_LABEL,
@@ -83,6 +84,8 @@ export default function StudioPage({ onExit }) {
   const [inspectorOpen, setInspectorOpen] = useState(!compact);
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState("");
+  const [emptyDismissed, setEmptyDismissed] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const dragDepth = useRef(0);
   const uploadedUrls = useRef(new Set());
@@ -91,6 +94,7 @@ export default function StudioPage({ onExit }) {
   const cursorRef = useRef(cursor);
   const cursorApi = useRef(null);
   const focusApi = useRef(null);
+  const deleteSelection = useRef(null);
   const [topbarHeight, setTopbarHeight] = useState(64);
 
   const readyKey = models.map((model) => (model.object ? "1" : "0")).join("");
@@ -165,6 +169,10 @@ export default function StudioPage({ onExit }) {
       else if (key === "r") setTransformMode("rotate");
       else if (key === "s") setTransformMode("scale");
       else if (key === "escape") setSelected(null);
+      else if (key === "delete" || key === "backspace") {
+        event.preventDefault();
+        deleteSelection.current?.();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -235,6 +243,20 @@ export default function StudioPage({ onExit }) {
     [addModels]
   );
 
+  const insertPrimitive = useCallback(
+    (item) => {
+      addModels([
+        {
+          name: item.label,
+          primitive: item.key,
+          format: "Mesh",
+          source: "primitive",
+        },
+      ]);
+    },
+    [addModels]
+  );
+
   const handleReady = useCallback((id, group) => {
     setModels((prev) =>
       prev.map((model) =>
@@ -288,6 +310,47 @@ export default function StudioPage({ onExit }) {
       return current;
     });
   }, []);
+
+  // Removes the selected node (or its whole inserted model when a model root is
+  // selected) from the scene. Delete/Backspace and the inspector's Delete
+  // button both use this.
+  const removeSelection = useCallback(() => {
+    const target = selected;
+    if (!target || target === sceneRoot || !target.parent) return;
+    let owner = null;
+    for (let node = target; node; node = node.parent) {
+      if (node.userData?.studioModelId) {
+        owner = node;
+        break;
+      }
+    }
+    if (owner && owner === target) {
+      removeModel(owner.userData.studioModelId);
+    } else {
+      const parent = target.parent;
+      parent.remove(target);
+      // Drop the whole inserted model once its last mesh is gone, so the scene
+      // tree does not keep an empty group behind.
+      let rootOwner = null;
+      for (let node = parent; node; node = node.parent) {
+        if (node.userData?.studioModelId) {
+          rootOwner = node;
+          break;
+        }
+      }
+      let hasMesh = false;
+      rootOwner?.traverse?.((node) => {
+        if (node.isMesh) hasMesh = true;
+      });
+      if (rootOwner && !hasMesh) removeModel(rootOwner.userData.studioModelId);
+    }
+    setSelected(null);
+    setNotice(`Removed ${target.name || target.type}`);
+  }, [selected, sceneRoot, removeModel]);
+
+  useEffect(() => {
+    deleteSelection.current = removeSelection;
+  }, [removeSelection]);
 
   const toggleView = (key) =>
     setView((current) => ({ ...current, [key]: !current[key] }));
@@ -395,14 +458,24 @@ export default function StudioPage({ onExit }) {
         />
       </div>
 
-      {models.length === 0 && (
+      {models.length === 0 && !emptyDismissed && (
         <div className="studio-empty">
           <div className="studio-empty-card">
+            <button
+              type="button"
+              className="studio-empty-close"
+              onClick={() => setEmptyDismissed(true)}
+              title="Continue with a blank canvas"
+              aria-label="Continue with a blank canvas"
+            >
+              <X size={14} />
+            </button>
             <span className="studio-empty-badge">Blank canvas</span>
             <h1>Start your scene</h1>
             <p>
-              Drop a 3D model anywhere, or insert one from the library. New models
-              appear at the 3D cursor. Everything stays on your device.
+              Drop a 3D model anywhere, pick one from the library, or add a basic
+              mesh. New models appear at the 3D cursor. Everything stays on your
+              device.
             </p>
             <div className="studio-empty-actions">
               <button type="button" className="st-btn is-primary" onClick={openPicker}>
@@ -410,12 +483,41 @@ export default function StudioPage({ onExit }) {
               </button>
               <button
                 type="button"
-                className="st-btn"
-                onClick={() => insertLibrary(STUDIO_LIBRARY[0])}
+                className={`st-btn${pickerOpen ? " is-active" : ""}`}
+                aria-expanded={pickerOpen}
+                onClick={() => setPickerOpen((value) => !value)}
               >
-                Insert a sample
+                <Library size={14} /> Pick from library
               </button>
             </div>
+            {pickerOpen && (
+              <div className="studio-empty-picker">
+                <span className="studio-empty-picker-label">Library</span>
+                <div className="studio-empty-picker-row">
+                  {STUDIO_LIBRARY.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => insertLibrary(item)}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+                <span className="studio-empty-picker-label">Basic meshes</span>
+                <div className="studio-empty-picker-row">
+                  {PRIMITIVES.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => insertPrimitive(item)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <small>{MODEL_LABEL}</small>
           </div>
         </div>
@@ -465,7 +567,6 @@ export default function StudioPage({ onExit }) {
             onToView={cursorToView}
             onToggleVisible={() => toggleView("cursor")}
           />
-          <ExportMenu models={models} onNotice={setNotice} />
           <ViewerToolbar
             meshItems={models.map((model) => model.object).filter(Boolean)}
             brightness={brightness}
@@ -476,6 +577,14 @@ export default function StudioPage({ onExit }) {
             onViewChange={toggleView}
             canIsolate={Boolean(selected)}
             onCameraView={(dir) => setCameraView((current) => ({ dir, n: current.n + 1 }))}
+          />
+          <ExportMenu
+            objects={models.map((model) => model.object).filter(Boolean)}
+            name="studio-scene"
+            label="Export"
+            scope="Scene"
+            includeCapture
+            onNotice={setNotice}
           />
         </div>
       </div>
@@ -489,6 +598,7 @@ export default function StudioPage({ onExit }) {
         onToggleModel={toggleModel}
         onRemove={removeModel}
         onInsert={insertLibrary}
+        onPrimitive={insertPrimitive}
         onFiles={addFiles}
         onPick={openPicker}
       />
@@ -500,6 +610,7 @@ export default function StudioPage({ onExit }) {
           root={sceneRoot}
           focusApi={focusApi}
           onNotice={setNotice}
+          onDelete={removeSelection}
           onClose={() => setInspectorOpen(false)}
         />
       )}

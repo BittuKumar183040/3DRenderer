@@ -44,7 +44,7 @@ export default function CursorMenu({
     <div className="view-menu" ref={ref}>
       <button
         type="button"
-        className={`st-view-trigger${open ? " is-open" : ""}`}
+        className={`st-view-trigger studio-cursor-trigger${open ? " is-open" : ""}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="3D cursor options"

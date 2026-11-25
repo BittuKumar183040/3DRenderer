@@ -4,10 +4,20 @@ import { Camera, ChevronDown, Download, Loader2 } from "lucide-react";
 import { EXPORT_FORMATS, captureViewport, exportObjects } from "./exportScene";
 
 /**
- * Topbar export menu for the whole scene. Keeps the viewport screenshot here
- * too, so all file outputs live behind one Export button.
+ * One export button shared by the top bar (whole scene) and the selection
+ * inspector (just the selected object). A single trigger opens a menu with
+ * every geometry format, so no row of loose format buttons is needed.
  */
-export default function ExportMenu({ models, onNotice }) {
+export default function ExportMenu({
+  objects,
+  name = "studio",
+  label = "Export",
+  scope = "Scene",
+  includeCapture = false,
+  placement = "down",
+  className = "",
+  onNotice,
+}) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState("");
   const ref = useRef(null);
@@ -28,14 +38,14 @@ export default function ExportMenu({ models, onNotice }) {
     };
   }, [open]);
 
-  const objects = models.map((model) => model.object).filter(Boolean);
-  const canExport = objects.length > 0;
+  const list = (objects || []).filter(Boolean);
+  const canExport = list.length > 0;
 
-  const run = async (label, task) => {
+  const run = async (task) => {
     if (busy) return;
-    setBusy(label);
+    setBusy(task.id);
     try {
-      const filename = await task();
+      const filename = await task.run();
       onNotice?.(`Saved ${filename}`);
       setOpen(false);
     } catch (error) {
@@ -46,27 +56,30 @@ export default function ExportMenu({ models, onNotice }) {
   };
 
   return (
-    <div className="view-menu studio-export" ref={ref}>
+    <div className={`view-menu studio-export${className ? ` ${className}` : ""}`} ref={ref}>
       <button
         type="button"
         className={`st-view-trigger studio-export-trigger${open ? " is-open" : ""}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Export scene"
-        title="Export scene"
+        aria-label={label}
+        title={label}
         onClick={() => setOpen((value) => !value)}
       >
         <Download size={14} />
-        <span>Export</span>
+        <span>{label}</span>
         <ChevronDown size={12} />
       </button>
 
       <div
-        className={`view-popover studio-export-popover${open ? " is-open" : ""}`}
+        className={`view-popover studio-export-popover${placement === "up" ? " is-up" : ""}${open ? " is-open" : ""}`}
         role="menu"
       >
         <span className="view-label">
-          Scene{canExport ? ` · ${objects.length} object${objects.length > 1 ? "s" : ""}` : ""}
+          {scope}
+          {canExport
+            ? ` · ${list.length} object${list.length > 1 ? "s" : ""}`
+            : ""}
         </span>
         <div className="studio-export-grid">
           {EXPORT_FORMATS.map((format) => (
@@ -77,7 +90,10 @@ export default function ExportMenu({ models, onNotice }) {
               title={format.title}
               disabled={!canExport || Boolean(busy)}
               onClick={() =>
-                run(format.id, () => exportObjects(objects, format.id, "studio-scene"))
+                run({
+                  id: format.id,
+                  run: () => exportObjects(list, format.id, name),
+                })
               }
             >
               {busy === format.id ? <Loader2 size={12} className="is-spinning" /> : null}
@@ -90,26 +106,42 @@ export default function ExportMenu({ models, onNotice }) {
           textures.
         </p>
 
-        <span className="view-label">Image</span>
-        <button
-          type="button"
-          role="menuitem"
-          className="studio-export-capture"
-          disabled={Boolean(busy)}
-          onClick={() => run("png", () => captureViewport("studio-scene"))}
-        >
-          <Camera size={14} />
-          <span>
-            <b>Viewport PNG</b>
-            <small>What the camera sees right now</small>
-          </span>
-        </button>
+        {includeCapture && (
+          <>
+            <span className="view-label">Image</span>
+            <button
+              type="button"
+              role="menuitem"
+              className="studio-export-capture"
+              disabled={Boolean(busy)}
+              onClick={() =>
+                run({ id: "png", run: () => captureViewport(name) })
+              }
+            >
+              {busy === "png" ? (
+                <Loader2 size={14} className="is-spinning" />
+              ) : (
+                <Camera size={14} />
+              )}
+              <span>
+                <b>Viewport PNG</b>
+                <small>What the camera sees right now</small>
+              </span>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 ExportMenu.propTypes = {
-  models: PropTypes.array.isRequired,
+  objects: PropTypes.array.isRequired,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  scope: PropTypes.string,
+  includeCapture: PropTypes.bool,
+  placement: PropTypes.oneOf(["down", "up"]),
+  className: PropTypes.string,
   onNotice: PropTypes.func,
 };

@@ -13,19 +13,49 @@ import {
   Focus,
   ImagePlus,
   Layers3,
-  Loader2,
   Trash2,
   X,
 } from "lucide-react";
-import { EXPORT_FORMATS, exportObjects } from "./exportScene";
+import ExportMenu from "./ExportMenu";
+import { downloadBlob, slug } from "./exportScene";
 
 const number = (value) => Number(Number(value).toFixed(2));
 
+/** Ready-made surfaces that can be applied to the whole selection. */
+const MATERIAL_PRESETS = [
+  { key: "plastic", label: "Plastic", color: "#cfd3e8", roughness: 0.55, metalness: 0.05 },
+  { key: "matte", label: "Matte", color: "#e8e8ef", roughness: 0.95, metalness: 0 },
+  { key: "metal", label: "Metal", color: "#b8bcc7", roughness: 0.3, metalness: 1 },
+  { key: "chrome", label: "Chrome", color: "#e9ecf2", roughness: 0.05, metalness: 1 },
+  { key: "gold", label: "Gold", color: "#d8b264", roughness: 0.25, metalness: 1 },
+  { key: "copper", label: "Copper", color: "#c07a52", roughness: 0.32, metalness: 1 },
+  {
+    key: "glass",
+    label: "Glass",
+    color: "#dfe6f2",
+    roughness: 0.06,
+    metalness: 0,
+    opacity: 0.32,
+    transparent: true,
+  },
+  { key: "rubber", label: "Rubber", color: "#2d2f38", roughness: 0.95, metalness: 0 },
+  { key: "clay", label: "Clay", color: "#d9a58c", roughness: 1, metalness: 0 },
+  {
+    key: "neon",
+    label: "Neon",
+    color: "#8f7bff",
+    roughness: 0.4,
+    metalness: 0,
+    emissive: "#6a4dff",
+    emissiveIntensity: 1.2,
+  },
+];
+
 /**
  * Studio selection inspector. On top of the transform readouts it edits the
- * material, swaps in a custom texture and exports just the selected object.
- * The header can collapse the panel to a slim bar so the viewport keeps the
- * selection but gains working room.
+ * material, applies presets, swaps in (or downloads) a custom texture, deletes
+ * the selection and exports just that object. The header can collapse the
+ * panel to a slim bar so the viewport keeps the selection but gains room.
  */
 export default function SelectionPanel({
   open,
@@ -33,11 +63,13 @@ export default function SelectionPanel({
   root,
   focusApi,
   onClose,
+  onDelete,
   onNotice,
 }) {
   const [, refresh] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
-  const [busy, setBusy] = useState("");
+  const [more, setMore] = useState(false);
+  const [preset, setPreset] = useState("");
   const [textureUrl, setTextureUrl] = useState("");
   const textureFile = useRef(null);
   const customTexture = useRef(null);
@@ -80,16 +112,26 @@ export default function SelectionPanel({
     for (let node = object; node && node !== root; node = node.parent) {
       chain.unshift(node.name || node.type);
     }
-    const geometry = object.geometry;
-    const position = geometry?.attributes?.position;
-    const triangles = geometry ? (geometry.index?.count ?? position?.count ?? 0) / 3 : 0;
+    let vertices = 0;
+    let triangles = 0;
+    let meshCount = 0;
+    object.traverse?.((node) => {
+      if (!node.isMesh) return;
+      meshCount += 1;
+      const geometry = node.geometry;
+      const position = geometry?.attributes?.position;
+      vertices += position?.count ?? 0;
+      triangles += Math.floor((geometry?.index?.count ?? position?.count ?? 0) / 3);
+    });
     const box = new THREE.Box3().setFromObject(object);
     const size = box.isEmpty() ? null : box.getSize(new THREE.Vector3());
     return {
       chain,
-      vertices: position?.count ?? 0,
-      triangles: Math.floor(triangles),
+      vertices,
+      triangles,
+      meshCount,
       size,
+      children: object.children?.length ?? 0,
     };
   }, [object, root]);
 
@@ -154,24 +196,59 @@ export default function SelectionPanel({
     );
   };
 
-  const runExport = async (format) => {
-    if (busy) return;
-    setBusy(format);
+  const downloadTexture = () => {
+    const image = map?.image;
+    if (!image?.width) {
+      onNotice?.("There is no texture to download.");
+      return;
+    }
     try {
-      const filename = await exportObjects(
-        [object],
-        format,
-        object.name || "selection"
-      );
-      onNotice?.(`Saved ${filename}`);
-    } catch (error) {
-      onNotice?.(`Export failed — ${error.message}`);
-    } finally {
-      setBusy("");
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          onNotice?.("Could not read the texture.");
+          return;
+        }
+        const filename = `${slug(object.name || "selection")}-texture.png`;
+        downloadBlob(blob, filename);
+        onNotice?.(`Saved ${filename}`);
+      }, "image/png");
+    } catch {
+      onNotice?.("This texture cannot be downloaded.");
     }
   };
 
+  // Presets clone per mesh for the same isolation reason as textures.
+  const applyPreset = (choice) => {
+    meshes.forEach((mesh) => {
+      const apply = (item) => {
+        const copy = item.clone();
+        copy.color?.set(copy.map ? "#ffffff" : choice.color);
+        if ("roughness" in copy) copy.roughness = choice.roughness;
+        if ("metalness" in copy) copy.metalness = choice.metalness;
+        copy.opacity = choice.opacity ?? 1;
+        copy.transparent = Boolean(choice.transparent);
+        if (copy.emissive) {
+          copy.emissive.set(choice.emissive || "#000000");
+          copy.emissiveIntensity = choice.emissiveIntensity ?? 1;
+        }
+        copy.needsUpdate = true;
+        return copy;
+      };
+      mesh.material = Array.isArray(mesh.material)
+        ? mesh.material.map(apply)
+        : apply(mesh.material);
+    });
+    setPreset(choice.key);
+    update();
+    onNotice?.(`Applied the ${choice.label.toLowerCase()} material`);
+  };
+
   const name = object.name || object.type || "Object";
+  const meshLabel = `${details.meshCount} ${details.meshCount === 1 ? "mesh" : "meshes"}`;
 
   if (collapsed) {
     return (
@@ -273,15 +350,51 @@ export default function SelectionPanel({
               {object.visible ? <Eye size={13} /> : <EyeOff size={13} />}
               {object.visible ? "Hide" : "Show"}
             </button>
+            <button
+              type="button"
+              className="inspector-delete"
+              onClick={onDelete}
+              title="Remove from the scene (Delete)"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
           </div>
-          <div className="inspector-grid">
-            <span>Type</span>
-            <b>{object.type}</b>
-            <span>UUID</span>
-            <code>{object.uuid.slice(0, 12)}…</code>
-            <span>Meshes</span>
-            <b>{meshes.length}</b>
+
+          <div className="inspector-facts">
+            <span>{object.type}</span>
+            <i aria-hidden="true" />
+            <span>{meshLabel}</span>
+            <button
+              type="button"
+              className={`inspector-more${more ? " is-open" : ""}`}
+              aria-expanded={more}
+              onClick={() => setMore((value) => !value)}
+            >
+              {more ? "Less" : "More"}
+              <ChevronDown size={12} />
+            </button>
           </div>
+
+          {more && (
+            <div className="inspector-grid inspector-more-grid">
+              <span>UUID</span>
+              <code>{object.uuid.slice(0, 12)}…</code>
+              <span>Vertices</span>
+              <b>{details.vertices.toLocaleString()}</b>
+              <span>Triangles</span>
+              <b>{details.triangles.toLocaleString()}</b>
+              <span>Bounds</span>
+              <b>
+                {details.size
+                  ? `${details.size.x.toFixed(2)} × ${details.size.y.toFixed(2)} × ${details.size.z.toFixed(2)}`
+                  : "—"}
+              </b>
+              <span>Materials</span>
+              <b>{materials.length}</b>
+              <span>Children</span>
+              <b>{details.children}</b>
+            </div>
+          )}
         </section>
 
         <section className="inspector-section">
@@ -336,23 +449,29 @@ export default function SelectionPanel({
           ))}
         </section>
 
-        {object.isMesh && (
-          <section className="inspector-section">
-            <h3>Geometry</h3>
-            <div className="inspector-grid">
-              <span>Vertices</span>
-              <b>{details.vertices.toLocaleString()}</b>
-              <span>Triangles</span>
-              <b>{details.triangles.toLocaleString()}</b>
-              <span>Bounds</span>
-              <b>
-                {details.size
-                  ? `${details.size.x.toFixed(2)} × ${details.size.y.toFixed(2)} × ${details.size.z.toFixed(2)}`
-                  : "—"}
-              </b>
-            </div>
-          </section>
-        )}
+        <section className="inspector-section">
+          <h3>Materials</h3>
+          <div className="inspector-presets">
+            {MATERIAL_PRESETS.map((choice) => (
+              <button
+                key={choice.key}
+                type="button"
+                className={preset === choice.key ? "is-active" : ""}
+                title={`Apply ${choice.label.toLowerCase()} to this selection`}
+                onClick={() => applyPreset(choice)}
+              >
+                <i
+                  aria-hidden="true"
+                  style={{
+                    background: choice.color,
+                    opacity: choice.transparent ? 0.45 : 1,
+                  }}
+                />
+                <span>{choice.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         {material && (
           <section className="inspector-section">
@@ -462,6 +581,14 @@ export default function SelectionPanel({
             >
               <ImagePlus size={13} /> Upload
             </button>
+            <button
+              type="button"
+              onClick={downloadTexture}
+              disabled={!map}
+              title={map ? "Download this texture as a PNG" : "No texture to download"}
+            >
+              <Download size={13} /> Download
+            </button>
             {map && (
               <button type="button" onClick={detachTexture} title="Remove the texture">
                 <Trash2 size={13} /> Remove
@@ -480,33 +607,21 @@ export default function SelectionPanel({
           />
         </section>
 
-        <section className="inspector-section inspector-export">
-          <h3>Export selection</h3>
-          <div className="studio-export-grid">
-            {EXPORT_FORMATS.map((format) => (
-              <button
-                key={format.id}
-                type="button"
-                title={`${format.title} — ${name}`}
-                disabled={Boolean(busy)}
-                onClick={() => runExport(format.id)}
-              >
-                {busy === format.id ? <Loader2 size={12} className="is-spinning" /> : null}
-                {format.label}
-              </button>
-            ))}
-          </div>
-          <p className="studio-export-note">Only this object is written to the file.</p>
-        </section>
-
         <div className="inspector-hint">
-          <Box size={13} /> Click a mesh in the viewport to inspect it · Esc clears
-          the selection
-        </div>
-        <div className="inspector-hint">
-          <Download size={13} /> Exports download straight to your device
+          <Box size={13} /> Delete removes the selection · Esc clears it
         </div>
       </div>
+
+      <footer className="inspector-foot">
+        <ExportMenu
+          objects={[object]}
+          name={name}
+          label="Export selection"
+          scope="Selection"
+          placement="up"
+          onNotice={onNotice}
+        />
+      </footer>
     </aside>
   );
 }
@@ -517,5 +632,6 @@ SelectionPanel.propTypes = {
   root: PropTypes.object,
   focusApi: PropTypes.shape({ current: PropTypes.any }),
   onClose: PropTypes.func.isRequired,
+  onDelete: PropTypes.func,
   onNotice: PropTypes.func,
 };
