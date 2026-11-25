@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Layers3 } from "lucide-react";
 import { LuBox, LuCamera, LuCircle, LuLightbulb, LuPackage, LuScanLine } from "react-icons/lu";
@@ -19,11 +19,32 @@ TypeIcon.propTypes = {
 
 function NodeRow({ node, depth, selected, onSelect, onToggleNode, onRefresh }) {
   const [open, setOpen] = useState(depth === 0);
+  const rowRef = useRef(null);
   const children = node.children || [];
+
+  // Keep every ancestor of the selection expanded, so picking a mesh in the
+  // viewport or resource list reveals it in the tree instead of leaving it
+  // buried under closed groups.
+  const holdsSelection = useMemo(() => {
+    if (!selected) return false;
+    for (let current = selected; current; current = current.parent) {
+      if (current === node) return true;
+    }
+    return false;
+  }, [selected, node]);
+
+  useEffect(() => {
+    if (holdsSelection) setOpen(true);
+  }, [holdsSelection]);
+
+  useEffect(() => {
+    if (selected === node) rowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [selected, node]);
 
   return (
     <div className="tree-node">
       <div
+        ref={rowRef}
         className={`tree-row${selected === node ? " is-selected" : ""}`}
         style={{ paddingLeft: `${8 + depth * 13}px` }}
         role="treeitem"

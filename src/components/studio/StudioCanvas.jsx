@@ -218,6 +218,48 @@ CursorBridge.propTypes = {
   apiRef: PropTypes.shape({ current: PropTypes.any }),
 };
 
+/** Exposes a camera framing helper for the selection inspector. */
+function FocusBridge({ apiRef }) {
+  const camera = useThree((state) => state.camera);
+  const controls = useThree((state) => state.controls);
+
+  useEffect(() => {
+    if (!apiRef) return undefined;
+    apiRef.current = {
+      focus: (object) => {
+        if (!object || !controls) return;
+        object.updateWorldMatrix(true, false);
+        const box = new THREE.Box3().setFromObject(object);
+        if (box.isEmpty()) return;
+        const sphere = box.getBoundingSphere(new THREE.Sphere());
+        const direction = camera.position.clone().sub(controls.target);
+        if (direction.lengthSq() < 1e-6) direction.set(1, 0.72, 1);
+        direction.normalize();
+        const verticalFov = (camera.fov * Math.PI) / 180;
+        const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+        const distance =
+          ((sphere.radius + 0.6) / Math.sin(Math.min(verticalFov, horizontalFov) / 2)) *
+          1.15;
+        controls.target.copy(sphere.center);
+        camera.position
+          .copy(sphere.center)
+          .addScaledVector(direction, Math.max(distance, 2));
+        camera.lookAt(sphere.center);
+        controls.update();
+      },
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef, camera, controls]);
+
+  return null;
+}
+
+FocusBridge.propTypes = {
+  apiRef: PropTypes.shape({ current: PropTypes.any }),
+};
+
 export default function StudioCanvas({
   models,
   sceneRoot,
@@ -230,6 +272,7 @@ export default function StudioCanvas({
   selected,
   transformMode,
   cursorApi,
+  focusApi,
   onSelect,
   onReady,
   onDetach,
@@ -303,6 +346,7 @@ export default function StudioCanvas({
         onHold={onCursorHold}
       />
       <CursorBridge apiRef={cursorApi} />
+      <FocusBridge apiRef={focusApi} />
       <TransformGizmo object={selected} mode={transformMode} onBusyChange={handleBusy} />
 
       <IsolateObject enabled={view.isolate} root={sceneRoot} selected={selected} />
@@ -332,6 +376,7 @@ StudioCanvas.propTypes = {
   selected: PropTypes.object,
   transformMode: PropTypes.oneOf(["translate", "rotate", "scale"]).isRequired,
   cursorApi: PropTypes.shape({ current: PropTypes.any }),
+  focusApi: PropTypes.shape({ current: PropTypes.any }),
   onSelect: PropTypes.func.isRequired,
   onReady: PropTypes.func.isRequired,
   onDetach: PropTypes.func.isRequired,

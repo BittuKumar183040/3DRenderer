@@ -121,15 +121,17 @@ export default function ViewerToolbar({
           <SelectMenu title="Objects" items={meshes} handleClick={toggleItem} />
         )}
         <span className="st-divider" aria-hidden="true" />
-        <button
-          type="button"
-          className="st-icon"
-          title="Save viewport as PNG"
-          aria-label="Save viewport as PNG"
-          onClick={capture}
-        >
-          <Camera size={16} />
-        </button>
+        {!disable.includes("camera") && (
+          <button
+            type="button"
+            className="st-icon"
+            title="Save viewport as PNG"
+            aria-label="Save viewport as PNG"
+            onClick={capture}
+          >
+            <Camera size={16} />
+          </button>
+        )}
         <button
           type="button"
           className={`st-icon${fullscreen ? " is-active" : ""}`}

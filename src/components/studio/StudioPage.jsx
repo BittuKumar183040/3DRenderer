@@ -3,13 +3,14 @@ import PropTypes from "prop-types";
 import { Layers3, SlidersHorizontal, UploadCloud } from "lucide-react";
 import ViewerBrand from "../renderer/Studio/shell/ViewerBrand";
 import ViewerToolbar from "../renderer/Studio/shell/ViewerToolbar";
-import Inspector from "../renderer/Studio/shell/Inspector";
 import LoadingOverlay from "../renderer/Studio/shell/LoadingOverlay";
 import useMediaQuery from "../renderer/Studio/shell/useMediaQuery";
 import StudioCanvas from "./StudioCanvas";
 import ModelSidebar from "./ModelSidebar";
 import CursorMenu from "./CursorMenu";
 import TransformBar from "./TransformBar";
+import ExportMenu from "./ExportMenu";
+import SelectionPanel from "./SelectionPanel";
 import STUDIO_LIBRARY from "./library";
 import {
   MODEL_ACCEPT,
@@ -89,6 +90,7 @@ export default function StudioPage({ onExit }) {
   const topbarRef = useRef(null);
   const cursorRef = useRef(cursor);
   const cursorApi = useRef(null);
+  const focusApi = useRef(null);
   const [topbarHeight, setTopbarHeight] = useState(64);
 
   const readyKey = models.map((model) => (model.object ? "1" : "0")).join("");
@@ -382,6 +384,7 @@ export default function StudioPage({ onExit }) {
           selected={selected}
           transformMode={transformMode}
           cursorApi={cursorApi}
+          focusApi={focusApi}
           onSelect={setSelected}
           onReady={handleReady}
           onDetach={handleDetach}
@@ -462,12 +465,13 @@ export default function StudioPage({ onExit }) {
             onToView={cursorToView}
             onToggleVisible={() => toggleView("cursor")}
           />
+          <ExportMenu models={models} onNotice={setNotice} />
           <ViewerToolbar
             meshItems={models.map((model) => model.object).filter(Boolean)}
             brightness={brightness}
             onBrightness={setBrightness}
             onReset={resetScene}
-            disable={["random"]}
+            disable={["random", "camera"]}
             view={view}
             onViewChange={toggleView}
             canIsolate={Boolean(selected)}
@@ -490,15 +494,13 @@ export default function StudioPage({ onExit }) {
       />
 
       {selected && (
-        <Inspector
+        <SelectionPanel
           open={inspectorOpen}
           object={selected}
           root={sceneRoot}
-          onSelect={setSelected}
-          onClose={() => {
-            setInspectorOpen(false);
-            setSelected(null);
-          }}
+          focusApi={focusApi}
+          onNotice={setNotice}
+          onClose={() => setInspectorOpen(false)}
         />
       )}
 
