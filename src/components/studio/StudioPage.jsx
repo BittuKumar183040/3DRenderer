@@ -36,9 +36,10 @@ const roundPoint = (value) => Math.round(value * 100) / 100;
  * First free spot around the 3D cursor: exactly on it when nothing is there,
  * otherwise a widening spiral so repeated inserts never stack.
  */
-function freeSpotNear(cursor, positions) {
+function freeSpotNear(cursor, positions, spacing = 4.2) {
+  const clearance = Math.max(0.7, spacing * 0.55);
   for (let slot = 0; slot < 64; slot += 1) {
-    const radius = slot === 0 ? 0 : 4.2 * Math.sqrt(slot);
+    const radius = slot === 0 ? 0 : spacing * Math.sqrt(slot);
     const angle = slot * 2.399963;
     const point = [
       cursor[0] + Math.cos(angle) * radius,
@@ -47,7 +48,7 @@ function freeSpotNear(cursor, positions) {
     ];
     const free = positions.every(
       (position) =>
-        Math.hypot(position[0] - point[0], position[2] - point[2]) > 2.4 ||
+        Math.hypot(position[0] - point[0], position[2] - point[2]) > clearance ||
         Math.abs(position[1] - point[1]) > 0.8
     );
     if (free) return point;
@@ -187,9 +188,12 @@ export default function StudioPage({ onExit }) {
     setModels((prev) => {
       const placed = [...prev];
       const additions = entries.map((entry) => {
+        // Lamps are invisible geometry, so they only need a small offset — the
+        // wide spiral is for objects that would visually overlap.
         const position = freeSpotNear(
           point,
-          placed.map((model) => model.position)
+          placed.map((model) => model.position),
+          entry.light ? 0.9 : 4.2
         );
         const model = { ...entry, id: nextId(), position, object: null, visible: true };
         placed.push(model);
@@ -250,6 +254,48 @@ export default function StudioPage({ onExit }) {
           name: item.label,
           primitive: item.key,
           format: "Mesh",
+          source: "primitive",
+        },
+      ]);
+    },
+    [addModels]
+  );
+
+  const insertLight = useCallback(
+    (item) => {
+      addModels([
+        {
+          name: `${item.label} light`,
+          light: item.key,
+          format: "Light",
+          source: "primitive",
+        },
+      ]);
+    },
+    [addModels]
+  );
+
+  const insertCurve = useCallback(
+    (item) => {
+      addModels([
+        {
+          name: `${item.label} curve`,
+          curve: item.key,
+          format: "Curve",
+          source: "primitive",
+        },
+      ]);
+    },
+    [addModels]
+  );
+
+  const insertText = useCallback(
+    (value) => {
+      addModels([
+        {
+          name: value,
+          text: value,
+          format: "Text",
           source: "primitive",
         },
       ]);
@@ -599,6 +645,9 @@ export default function StudioPage({ onExit }) {
         onRemove={removeModel}
         onInsert={insertLibrary}
         onPrimitive={insertPrimitive}
+        onLight={insertLight}
+        onCurve={insertCurve}
+        onText={insertText}
         onFiles={addFiles}
         onPick={openPicker}
       />

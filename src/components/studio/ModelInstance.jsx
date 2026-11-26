@@ -2,7 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { createPrimitive } from "./primitives";
+import { createLight } from "./lights";
+import { createCurve } from "./curves";
+import { createText } from "./texts";
 import { loadModel, normalizeModel } from "./loadModel";
+
+/** Locally built objects (mesh, lamp, text, curve) need no file loading. */
+function buildObject(model) {
+  if (model.primitive) return createPrimitive(model.primitive);
+  if (model.light) return createLight(model.light);
+  if (model.curve) return createCurve(model.curve);
+  if (model.text) return createText(model.text);
+  return null;
+}
 
 /**
  * One model placed on the studio canvas — either a loaded file or a built-in
@@ -23,8 +35,9 @@ export default function ModelInstance({
   useEffect(() => {
     let active = true;
     setObject(null);
-    if (model.primitive) {
-      setObject(createPrimitive(model.primitive));
+    const built = buildObject(model);
+    if (built) {
+      setObject(built);
       return () => {
         active = false;
       };
@@ -40,7 +53,17 @@ export default function ModelInstance({
     return () => {
       active = false;
     };
-  }, [model.url, model.ext, model.primitive, model.id, model.name, onError]);
+  }, [
+    model.url,
+    model.ext,
+    model.primitive,
+    model.light,
+    model.curve,
+    model.text,
+    model.id,
+    model.name,
+    onError,
+  ]);
 
   useEffect(() => {
     const group = groupRef.current;
@@ -72,6 +95,9 @@ ModelInstance.propTypes = {
     url: PropTypes.string,
     ext: PropTypes.string,
     primitive: PropTypes.string,
+    light: PropTypes.string,
+    curve: PropTypes.string,
+    text: PropTypes.string,
   }).isRequired,
   position: PropTypes.arrayOf(PropTypes.number).isRequired,
   onReady: PropTypes.func.isRequired,

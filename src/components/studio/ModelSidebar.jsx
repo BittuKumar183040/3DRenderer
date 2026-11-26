@@ -132,6 +132,9 @@ export default function ModelSidebar({
   onRemove,
   onInsert,
   onPrimitive,
+  onLight,
+  onCurve,
+  onText,
   onFiles,
   onPick,
 }) {
@@ -221,6 +224,9 @@ export default function ModelSidebar({
         onRemove={onRemove}
         onInsert={onInsert}
         onPrimitive={onPrimitive}
+        onLight={onLight}
+        onCurve={onCurve}
+        onText={onText}
         onFiles={onFiles}
         onPick={onPick}
       />
@@ -238,6 +244,9 @@ ModelSidebar.propTypes = {
   onRemove: PropTypes.func.isRequired,
   onInsert: PropTypes.func.isRequired,
   onPrimitive: PropTypes.func.isRequired,
+  onLight: PropTypes.func.isRequired,
+  onCurve: PropTypes.func.isRequired,
+  onText: PropTypes.func.isRequired,
   onFiles: PropTypes.func.isRequired,
   onPick: PropTypes.func.isRequired,
 };

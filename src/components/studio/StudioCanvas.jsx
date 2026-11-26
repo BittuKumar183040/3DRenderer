@@ -31,7 +31,9 @@ function FrameAll({ models, readyKey, fitKey }) {
     // matrices, which are still stale on the frame a model reports ready.
     const box = new THREE.Box3();
     models.forEach((model) => {
-      if (!model.object) return;
+      // Lamps, text and curves are not model-sized, so adding one should not
+      // reframe the camera around the model footprint.
+      if (!model.object || model.light || model.text || model.curve) return;
       const { x, y, z } = model.object.position;
       box.expandByPoint(new THREE.Vector3(x - HALF_MODEL, y, z - HALF_MODEL));
       box.expandByPoint(
