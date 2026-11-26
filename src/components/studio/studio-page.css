@@ -619,6 +619,7 @@
   align-items: center;
   gap: 2px;
   height: var(--s-bar-h);
+  flex: 0 0 auto;
   padding: 0 4px;
   border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 12px;
