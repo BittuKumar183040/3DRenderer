@@ -40,9 +40,5 @@ export function createText(value = "Text") {
     new THREE.MeshStandardMaterial({ color: "#5a5d70", roughness: 0.55, metalness: 0.05 })
   );
   mesh.name = label;
-
-  const group = new THREE.Group();
-  group.name = label;
-  group.add(mesh);
-  return group;
+  return mesh;
 }

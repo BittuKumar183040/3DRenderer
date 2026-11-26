@@ -43,7 +43,7 @@ function geometryFor(key) {
   }
 }
 
-/** Builds one primitive as a named group with the mesh resting on y=0. */
+/** Builds one primitive as a named mesh resting on y=0. */
 export function createPrimitive(key) {
   const item = PRIMITIVES.find((entry) => entry.key === key) || PRIMITIVES[0];
   const geometry = geometryFor(item.key);
@@ -53,22 +53,24 @@ export function createPrimitive(key) {
     metalness: 0.05,
     side: item.key === "plane" ? THREE.DoubleSide : THREE.FrontSide,
   });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = item.label;
-
   geometry.computeBoundingBox();
   const box = geometry.boundingBox;
   const extent = box.getSize(new THREE.Vector3());
   const scale = SIZE / (Math.max(extent.x, extent.y, extent.z) || 1);
-  mesh.scale.setScalar(scale);
-  mesh.position.set(
-    -((box.min.x + box.max.x) / 2) * scale,
-    -box.min.y * scale,
-    -((box.min.z + box.max.z) / 2) * scale
+
+  // Bake the normalisation into the geometry so the mesh sits at the origin
+  // and can be placed directly at the 3D cursor without an extra wrapper group
+  // (which would show up as a redundant child in the scene graph).
+  geometry.scale(scale, scale, scale);
+  geometry.computeBoundingBox();
+  const fitted = geometry.boundingBox;
+  geometry.translate(
+    -((fitted.min.x + fitted.max.x) / 2),
+    -fitted.min.y,
+    -((fitted.min.z + fitted.max.z) / 2)
   );
 
-  const group = new THREE.Group();
-  group.name = item.label;
-  group.add(mesh);
-  return group;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = item.label;
+  return mesh;
 }

@@ -9,6 +9,7 @@ import IsolateObject from "../renderer/Studio/shell/IsolateObject";
 import SceneCapture from "../renderer/Studio/shell/SceneCapture";
 import SelectionOutline from "../renderer/Studio/shell/SelectionOutline";
 import ModelInstance from "./ModelInstance";
+import { consumePointerDrag } from "./pointerDrag";
 import Cursor3D from "./Cursor3D";
 import TransformGizmo from "./TransformGizmo";
 import { MODEL_TARGET_SIZE } from "./loadModel";
@@ -306,6 +307,7 @@ export default function StudioCanvas({
       gl={{ preserveDrawingBuffer: true }}
       camera={{ position: [9, 7, 11], fov: 45, near: 0.1, far: 400 }}
       onPointerMissed={() => {
+        if (consumePointerDrag()) return;
         if (!gizmoBusy.current) onSelect(null);
       }}
     >

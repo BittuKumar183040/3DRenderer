@@ -5,8 +5,8 @@ import { LuBox, LuCamera, LuCircle, LuLightbulb, LuPackage, LuScanLine } from "r
 import ResourceManager from "./ResourceManager";
 
 function TypeIcon({ node }) {
+  if (node.userData?.studioKind === "light" || node.isLight) return <LuLightbulb />;
   if (node.isMesh) return <LuBox />;
-  if (node.isLight) return <LuLightbulb />;
   if (node.isCamera) return <LuCamera />;
   if (node.isScene) return <LuScanLine />;
   if (node.isGroup) return <LuPackage />;
@@ -20,7 +20,11 @@ TypeIcon.propTypes = {
 function NodeRow({ node, depth, selected, onSelect, onToggleNode, onRefresh }) {
   const [open, setOpen] = useState(depth === 0);
   const rowRef = useRef(null);
-  const children = node.children || [];
+  // Objects are built from internal parts (lamps add their marker and target)
+  // that would only clutter the tree, so only real structure is listed.
+  const children = (node.children || []).filter(
+    (child) => !child.userData?.studioHelper
+  );
 
   // Keep every ancestor of the selection expanded, so picking a mesh in the
   // viewport or resource list reveals it in the tree instead of leaving it
@@ -163,7 +167,7 @@ export default function ModelSidebar({
   const meshCount = models.reduce((total, model) => {
     let count = 0;
     model.object?.traverse?.((node) => {
-      if (node.isMesh) count += 1;
+      if (node.isMesh && !node.userData?.studioHelper) count += 1;
     });
     return total + count;
   }, 0);

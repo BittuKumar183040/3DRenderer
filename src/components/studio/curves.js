@@ -67,7 +67,7 @@ function pathFor(key) {
   }
 }
 
-/** Builds one curve as a named group resting on the ground plane. */
+/** Builds one curve as a named tube mesh resting on the ground plane. */
 export function createCurve(key) {
   const item = CURVES.find((entry) => entry.key === key) || CURVES[0];
   const { curve, closed } = pathFor(item.key);
@@ -88,10 +88,6 @@ export function createCurve(key) {
       metalness: 0.08,
     })
   );
-  mesh.name = `${item.label} tube`;
-
-  const group = new THREE.Group();
-  group.name = `${item.label} curve`;
-  group.add(mesh);
-  return group;
+  mesh.name = `${item.label} curve`;
+  return mesh;
 }
