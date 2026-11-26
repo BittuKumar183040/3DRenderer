@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import * as THREE from "three";
 import {
   Box,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +14,8 @@ import {
   Focus,
   ImagePlus,
   Layers3,
+  Pencil,
+  Plus,
   Trash2,
   X,
 } from "lucide-react";
@@ -51,11 +54,43 @@ const MATERIAL_PRESETS = [
   },
 ];
 
+/** Material slots of one mesh, always as a flat list. */
+const materialList = (mesh) =>
+  (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(Boolean);
+
 /**
- * Studio selection inspector. On top of the transform readouts it edits the
- * material, applies presets, swaps in (or downloads) a custom texture, deletes
- * the selection and exports just that object. The header can collapse the
- * panel to a slim bar so the viewport keeps the selection but gains room.
+ * Stores the material slots on a mesh. More than one slot needs geometry
+ * groups, so the index buffer is split evenly across the slots; three.js then
+ * draws each slice with its own material.
+ */
+function assignSlots(mesh, list) {
+  const next = list.filter(Boolean);
+  if (!next.length) return;
+  mesh.material = next.length > 1 ? next : next[0];
+
+  const geometry = mesh.geometry;
+  if (!geometry) return;
+  geometry.clearGroups();
+  if (next.length < 2) return;
+
+  const total = geometry.index
+    ? geometry.index.count
+    : geometry.attributes?.position?.count || 0;
+  if (!total) return;
+
+  const span = Math.floor(total / next.length);
+  next.forEach((_, index) => {
+    const start = index * span;
+    const count = index === next.length - 1 ? total - start : span;
+    if (count > 0) geometry.addGroup(start, count, index);
+  });
+}
+
+/**
+ * Studio selection inspector. On top of the transform readouts it renames the
+ * object, edits or stacks materials, swaps in (or downloads) a custom texture,
+ * deletes the selection and exports just that object. The header can collapse
+ * the panel to a slim bar so the viewport keeps the selection but gains room.
  */
 export default function SelectionPanel({
   open,
@@ -64,16 +99,22 @@ export default function SelectionPanel({
   focusApi,
   onClose,
   onDelete,
+  onRename,
   onNotice,
 }) {
   const [, refresh] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [more, setMore] = useState(false);
-  const [preset, setPreset] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [activeSlot, setActiveSlot] = useState(0);
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState("");
   const [textureUrl, setTextureUrl] = useState("");
   const textureFile = useRef(null);
   const customTexture = useRef(null);
   const textureUrlRef = useRef("");
+  const moreRef = useRef(null);
+  const addRef = useRef(null);
 
   const update = () => refresh((value) => value + 1);
 
@@ -87,6 +128,39 @@ export default function SelectionPanel({
     []
   );
 
+  // A new selection starts fresh: no half-finished rename or open popover.
+  useEffect(() => {
+    setRenaming(false);
+    setMore(false);
+    setAddOpen(false);
+    setActiveSlot(0);
+    setDraft(object.name || object.type || "Object");
+  }, [object]);
+
+  useEffect(() => {
+    if (!more && !addOpen) return undefined;
+    const onPointerDown = (event) => {
+      if (more && moreRef.current && !moreRef.current.contains(event.target)) {
+        setMore(false);
+      }
+      if (addOpen && addRef.current && !addRef.current.contains(event.target)) {
+        setAddOpen(false);
+      }
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setMore(false);
+        setAddOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [more, addOpen]);
+
   // Recomputed every render: applying a texture swaps in cloned materials, so
   // a memo keyed only on the object would keep pointing at the old ones.
   const meshes = [];
@@ -94,16 +168,21 @@ export default function SelectionPanel({
     if (node.isMesh) meshes.push(node);
   });
 
-  const found = new Set();
-  meshes.forEach((mesh) => {
-    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    list.forEach((item) => {
-      if (item) found.add(item);
-    });
+  const slotCount = meshes.reduce(
+    (max, mesh) => Math.max(max, materialList(mesh).length),
+    0
+  );
+  const slotIndex = Math.min(activeSlot, Math.max(0, slotCount - 1));
+  const material = meshes.map((mesh) => materialList(mesh)[slotIndex]).find(Boolean) || null;
+  const slots = Array.from({ length: slotCount }, (_, index) => {
+    const item = meshes.map((mesh) => materialList(mesh)[index]).find(Boolean);
+    return {
+      index,
+      name: item?.name || item?.type || `Material ${index + 1}`,
+      hex: item?.color ? `#${item.color.getHexString()}` : "#c9cbd6",
+    };
   });
-  const materials = [...found];
 
-  const material = materials[0];
   const map = material?.map;
   const mapSource = map?.image?.src || "";
 
@@ -133,10 +212,14 @@ export default function SelectionPanel({
       size,
       children: object.children?.length ?? 0,
     };
-  }, [object, root]);
+    // object.name is read inside, so a rename has to recompute the crumbs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [object, root, object.name]);
 
   const editMaterial = (edit) => {
-    materials.forEach((item) => {
+    meshes.forEach((mesh) => {
+      const item = materialList(mesh)[slotIndex];
+      if (!item) return;
       edit(item);
       item.needsUpdate = true;
     });
@@ -145,10 +228,11 @@ export default function SelectionPanel({
 
   const detachTexture = () => {
     meshes.forEach((mesh) => {
-      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      list.forEach((item) => {
-        if (item) item.map = null;
-      });
+      const item = materialList(mesh)[slotIndex];
+      if (item) {
+        item.map = null;
+        item.needsUpdate = true;
+      }
     });
     if (customTexture.current) customTexture.current.dispose();
     if (textureUrlRef.current) URL.revokeObjectURL(textureUrlRef.current);
@@ -171,19 +255,18 @@ export default function SelectionPanel({
         customTexture.current = texture;
         textureUrlRef.current = url;
         setTextureUrl(url);
-        // Clone materials per mesh so the custom texture does not leak into
-        // other copies of the same library model.
+        // Clone the active slot per mesh so the custom texture does not leak
+        // into other copies of the same library model.
         meshes.forEach((mesh) => {
-          const cloneMaterial = (item) => {
-            const copy = item.clone();
-            copy.map = texture;
-            copy.color?.set("#ffffff");
-            copy.needsUpdate = true;
-            return copy;
-          };
-          mesh.material = Array.isArray(mesh.material)
-            ? mesh.material.map(cloneMaterial)
-            : cloneMaterial(mesh.material);
+          const list = [...materialList(mesh)];
+          const current = list[slotIndex];
+          if (!current) return;
+          const copy = current.clone();
+          copy.map = texture;
+          copy.color?.set("#ffffff");
+          copy.needsUpdate = true;
+          list[slotIndex] = copy;
+          assignSlots(mesh, list);
         });
         update();
         onNotice?.(`Texture applied from “${file.name}”`);
@@ -221,30 +304,60 @@ export default function SelectionPanel({
     }
   };
 
-  // Presets clone per mesh for the same isolation reason as textures.
-  const applyPreset = (choice) => {
+  // Adding a preset stacks another material slot on every mesh in the
+  // selection, so one object can carry several materials at once.
+  const addMaterial = (choice) => {
+    if (!meshes.length) return;
     meshes.forEach((mesh) => {
-      const apply = (item) => {
-        const copy = item.clone();
-        copy.color?.set(copy.map ? "#ffffff" : choice.color);
-        if ("roughness" in copy) copy.roughness = choice.roughness;
-        if ("metalness" in copy) copy.metalness = choice.metalness;
-        copy.opacity = choice.opacity ?? 1;
-        copy.transparent = Boolean(choice.transparent);
-        if (copy.emissive) {
-          copy.emissive.set(choice.emissive || "#000000");
-          copy.emissiveIntensity = choice.emissiveIntensity ?? 1;
-        }
-        copy.needsUpdate = true;
-        return copy;
-      };
-      mesh.material = Array.isArray(mesh.material)
-        ? mesh.material.map(apply)
-        : apply(mesh.material);
+      const list = materialList(mesh);
+      const base = list[list.length - 1] || new THREE.MeshStandardMaterial();
+      const copy = base.clone();
+      copy.name = choice.label;
+      copy.color?.set(choice.color);
+      if ("roughness" in copy) copy.roughness = choice.roughness;
+      if ("metalness" in copy) copy.metalness = choice.metalness;
+      copy.opacity = choice.opacity ?? 1;
+      copy.transparent = Boolean(choice.transparent);
+      if (copy.emissive) {
+        copy.emissive.set(choice.emissive || "#000000");
+        copy.emissiveIntensity = choice.emissiveIntensity ?? 1;
+      }
+      copy.needsUpdate = true;
+      assignSlots(mesh, [...list, copy]);
     });
-    setPreset(choice.key);
+    setActiveSlot(slotCount);
     update();
-    onNotice?.(`Applied the ${choice.label.toLowerCase()} material`);
+    onNotice?.(`Added the ${choice.label.toLowerCase()} material`);
+  };
+
+  const removeMaterial = (index) => {
+    meshes.forEach((mesh) => {
+      const list = materialList(mesh);
+      if (list.length <= 1) return;
+      const next = [...list];
+      next.splice(index, 1);
+      assignSlots(mesh, next);
+    });
+    setActiveSlot(Math.max(0, Math.min(index, slotCount - 2)));
+    update();
+    onNotice?.(`Removed material ${index + 1}`);
+  };
+
+  const submitRename = (event) => {
+    event.preventDefault();
+    const next = draft.trim();
+    if (!next) {
+      setRenaming(false);
+      return;
+    }
+    onRename?.(next);
+    setRenaming(false);
+    update();
+  };
+
+  const startRename = () => {
+    setDraft(object.name || object.type || "Object");
+    setRenaming(true);
   };
 
   const name = object.name || object.type || "Object";
@@ -294,7 +407,38 @@ export default function SelectionPanel({
       <header className="panel-head">
         <div className="panel-head-copy">
           <span className="panel-kicker">Selection</span>
-          <h2 className="panel-title inspector-name">{name}</h2>
+          {renaming ? (
+            <form className="inspector-rename" onSubmit={submitRename}>
+              <input
+                autoFocus
+                type="text"
+                value={draft}
+                aria-label="Object name"
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setRenaming(false);
+                }}
+              />
+              <button type="submit" title="Save name" aria-label="Save name">
+                <Check size={13} />
+              </button>
+            </form>
+          ) : (
+            <div className="inspector-name-row">
+              <h2 className="panel-title inspector-name" title={name}>
+                {name}
+              </h2>
+              <button
+                type="button"
+                className="inspector-rename-btn"
+                title="Rename object"
+                aria-label="Rename object"
+                onClick={startRename}
+              >
+                <Pencil size={12} />
+              </button>
+            </div>
+          )}
         </div>
         <div className="panel-head-actions">
           <button
@@ -364,37 +508,46 @@ export default function SelectionPanel({
             <span>{object.type}</span>
             <i aria-hidden="true" />
             <span>{meshLabel}</span>
-            <button
-              type="button"
-              className={`inspector-more${more ? " is-open" : ""}`}
-              aria-expanded={more}
-              onClick={() => setMore((value) => !value)}
-            >
-              {more ? "Less" : "More"}
-              <ChevronDown size={12} />
-            </button>
-          </div>
-
-          {more && (
-            <div className="inspector-grid inspector-more-grid">
-              <span>UUID</span>
-              <code>{object.uuid.slice(0, 12)}…</code>
-              <span>Vertices</span>
-              <b>{details.vertices.toLocaleString()}</b>
-              <span>Triangles</span>
-              <b>{details.triangles.toLocaleString()}</b>
-              <span>Bounds</span>
-              <b>
-                {details.size
-                  ? `${details.size.x.toFixed(2)} × ${details.size.y.toFixed(2)} × ${details.size.z.toFixed(2)}`
-                  : "—"}
-              </b>
-              <span>Materials</span>
-              <b>{materials.length}</b>
-              <span>Children</span>
-              <b>{details.children}</b>
+            <div className="inspector-more-wrap" ref={moreRef}>
+              <button
+                type="button"
+                className={`inspector-more${more ? " is-open" : ""}`}
+                aria-expanded={more}
+                aria-haspopup="dialog"
+                onClick={() => setMore((value) => !value)}
+              >
+                {more ? "Less" : "More"}
+                <ChevronDown size={12} />
+              </button>
+              {more && (
+                <div
+                  className="view-popover inspector-more-popover is-open"
+                  role="dialog"
+                  aria-label="Object details"
+                >
+                  <span className="view-label">Details</span>
+                  <div className="inspector-grid inspector-more-grid">
+                    <span>UUID</span>
+                    <code>{object.uuid.slice(0, 12)}…</code>
+                    <span>Vertices</span>
+                    <b>{details.vertices.toLocaleString()}</b>
+                    <span>Triangles</span>
+                    <b>{details.triangles.toLocaleString()}</b>
+                    <span>Bounds</span>
+                    <b>
+                      {details.size
+                        ? `${details.size.x.toFixed(2)} × ${details.size.y.toFixed(2)} × ${details.size.z.toFixed(2)}`
+                        : "—"}
+                    </b>
+                    <span>Materials</span>
+                    <b>{slotCount}</b>
+                    <span>Children</span>
+                    <b>{details.children}</b>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </section>
 
         <section className="inspector-section">
@@ -449,33 +602,105 @@ export default function SelectionPanel({
           ))}
         </section>
 
+        {meshes.length > 0 && (
         <section className="inspector-section">
-          <h3>Materials</h3>
-          <div className="inspector-presets">
-            {MATERIAL_PRESETS.map((choice) => (
+          <div className="inspector-section-head">
+            <h3>Materials</h3>
+            <div className="inspector-more-wrap" ref={addRef}>
               <button
-                key={choice.key}
                 type="button"
-                className={preset === choice.key ? "is-active" : ""}
-                title={`Apply ${choice.label.toLowerCase()} to this selection`}
-                onClick={() => applyPreset(choice)}
+                className={`inspector-add${addOpen ? " is-open" : ""}`}
+                aria-expanded={addOpen}
+                aria-haspopup="menu"
+                title="Add a material to this selection"
+                onClick={() => setAddOpen((value) => !value)}
+              >
+                <Plus size={12} /> Add
+              </button>
+              {addOpen && (
+                <div
+                  className="view-popover inspector-add-popover is-open"
+                  role="menu"
+                  aria-label="Material presets"
+                >
+                  <span className="view-label">Add material</span>
+                  <div className="inspector-add-list">
+                    {MATERIAL_PRESETS.map((choice) => (
+                      <button
+                        key={choice.key}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          addMaterial(choice);
+                          setAddOpen(false);
+                        }}
+                      >
+                        <i
+                          aria-hidden="true"
+                          style={{
+                            background: choice.color,
+                            opacity: choice.transparent ? 0.45 : 1,
+                          }}
+                        />
+                        <span>{choice.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="inspector-slots">
+            {slots.map((slot) => (
+              <div
+                key={slot.index}
+                className={`inspector-slot${slot.index === slotIndex ? " is-active" : ""}`}
+                role="button"
+                tabIndex={0}
+                title={slot.name}
+                onClick={() => {
+                  setActiveSlot(slot.index);
+                  update();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setActiveSlot(slot.index);
+                    update();
+                  }
+                }}
               >
                 <i
                   aria-hidden="true"
-                  style={{
-                    background: choice.color,
-                    opacity: choice.transparent ? 0.45 : 1,
-                  }}
+                  style={{ background: slot.hex }}
+                  className="inspector-slot-swatch"
                 />
-                <span>{choice.label}</span>
-              </button>
+                <span>{slot.name}</span>
+                <b>{slot.index + 1}</b>
+                {slotCount > 1 && (
+                  <button
+                    type="button"
+                    className="inspector-slot-remove"
+                    title={`Remove ${slot.name}`}
+                    aria-label={`Remove ${slot.name}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      removeMaterial(slot.index);
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </section>
+        )}
 
         {material && (
           <section className="inspector-section">
-            <h3>Material</h3>
+            <h3>Material settings</h3>
             <div className="inspector-material">
               <input
                 type="color"
@@ -488,7 +713,9 @@ export default function SelectionPanel({
               />
               <div>
                 <b>{material.name || material.type}</b>
-                <small>{material.type}</small>
+                <small>
+                  {material.type} · slot {slotIndex + 1} of {slotCount}
+                </small>
               </div>
             </div>
 
@@ -570,7 +797,7 @@ export default function SelectionPanel({
             )}
             <div>
               <b>{map ? "Custom texture applied" : "No texture"}</b>
-              <small>Replaces the base colour map on this selection</small>
+              <small>Replaces the base colour map on the active material</small>
             </div>
           </div>
           <div className="inspector-actions">
@@ -633,5 +860,6 @@ SelectionPanel.propTypes = {
   focusApi: PropTypes.shape({ current: PropTypes.any }),
   onClose: PropTypes.func.isRequired,
   onDelete: PropTypes.func,
+  onRename: PropTypes.func,
   onNotice: PropTypes.func,
 };

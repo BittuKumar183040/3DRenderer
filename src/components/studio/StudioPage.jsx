@@ -33,30 +33,6 @@ const nextId = () => {
 const roundPoint = (value) => Math.round(value * 100) / 100;
 
 /**
- * First free spot around the 3D cursor: exactly on it when nothing is there,
- * otherwise a widening spiral so repeated inserts never stack.
- */
-function freeSpotNear(cursor, positions, spacing = 4.2) {
-  const clearance = Math.max(0.7, spacing * 0.55);
-  for (let slot = 0; slot < 64; slot += 1) {
-    const radius = slot === 0 ? 0 : spacing * Math.sqrt(slot);
-    const angle = slot * 2.399963;
-    const point = [
-      cursor[0] + Math.cos(angle) * radius,
-      cursor[1],
-      cursor[2] + Math.sin(angle) * radius,
-    ];
-    const free = positions.every(
-      (position) =>
-        Math.hypot(position[0] - point[0], position[2] - point[2]) > clearance ||
-        Math.abs(position[1] - point[1]) > 0.8
-    );
-    if (free) return point;
-  }
-  return [...cursor];
-}
-
-/**
  * Blank-canvas studio: insert models (glTF, FBX, OBJ, STL, PLY, SVG) onto a
  * grid, position them at the 3D cursor, transform the selection with the
  * viewport gizmo, inspect them, then capture the viewport.
@@ -68,6 +44,7 @@ export default function StudioPage({ onExit }) {
   const [sceneRoot, setSceneRoot] = useState(null);
   const [selected, setSelected] = useState(null);
   const [brightness, setBrightness] = useState(2);
+  const [brightnessMax, setBrightnessMax] = useState(10);
   const [fitKey, setFitKey] = useState(0);
   const [cameraView, setCameraView] = useState({ dir: "iso", n: 0 });
   const [cursor, setCursor] = useState([0, 0, 0]);
@@ -185,22 +162,18 @@ export default function StudioPage({ onExit }) {
   const addModels = useCallback((entries) => {
     if (!entries.length) return;
     const point = cursorRef.current;
-    setModels((prev) => {
-      const placed = [...prev];
-      const additions = entries.map((entry) => {
-        // Lamps are invisible geometry, so they only need a small offset — the
-        // wide spiral is for objects that would visually overlap.
-        const position = freeSpotNear(
-          point,
-          placed.map((model) => model.position),
-          entry.light ? 0.9 : 4.2
-        );
-        const model = { ...entry, id: nextId(), position, object: null, visible: true };
-        placed.push(model);
-        return model;
-      });
-      return [...prev, ...additions];
-    });
+    setModels((prev) => [
+      ...prev,
+      ...entries.map((entry) => ({
+        ...entry,
+        id: nextId(),
+        // Every object lands exactly where the 3D cursor is, like Blender's
+        // Add menu, until the cursor is moved somewhere else.
+        position: [...point],
+        object: null,
+        visible: true,
+      })),
+    ]);
     setFitKey((value) => value + 1);
     setNotice("");
   }, []);
@@ -326,6 +299,54 @@ export default function StudioPage({ onExit }) {
     );
     setNotice(`Could not load “${name}”${message ? ` — ${message}` : ""}.`);
   }, []);
+
+  // Renames the selected object; model roots rename the inserted model itself so
+  // the scene tree, inspector and export names all follow along.
+  const renameSelection = useCallback(
+    (value) => {
+      const next = String(value || "").trim();
+      if (!next || !selected) return;
+      let owner = null;
+      for (let node = selected; node; node = node.parent) {
+        if (node.userData?.studioModelId) {
+          owner = node;
+          break;
+        }
+      }
+      if (owner === selected) {
+        // Renders the new name immediately; the group's name prop keeps it in
+        // sync with the model on later renders.
+        selected.name = next;
+        setModels((prev) =>
+          prev.map((model) =>
+            model.id === owner.userData.studioModelId ? { ...model, name: next } : model
+          )
+        );
+      } else {
+        selected.name = next;
+        setModels((prev) =>
+          prev.map((model) =>
+            model.id === owner?.userData?.studioModelId ? { ...model } : model
+          )
+        );
+      }
+      setNotice(`Renamed to “${next}”`);
+    },
+    [selected]
+  );
+
+  // Clicking through a hidden object in the viewport must not select it, and
+  // hiding the current selection drops it so the gizmo cannot move an invisible
+  // object.
+  useEffect(() => {
+    if (!selected) return;
+    for (let node = selected; node; node = node.parent) {
+      if (node.visible === false) {
+        setSelected(null);
+        return;
+      }
+    }
+  }, [models, selected]);
 
   const toggleModel = useCallback((id) => {
     setModels((prev) =>
@@ -492,6 +513,7 @@ export default function StudioPage({ onExit }) {
           readyKey={readyKey}
           selected={selected}
           transformMode={transformMode}
+          scenePanelOpen={sceneOpen}
           cursorApi={cursorApi}
           focusApi={focusApi}
           onSelect={setSelected}
@@ -529,7 +551,7 @@ export default function StudioPage({ onExit }) {
               </button>
               <button
                 type="button"
-                className={`st-btn${pickerOpen ? " is-active" : ""}`}
+                className={`st-btn is-secondary${pickerOpen ? " is-active" : ""}`}
                 aria-expanded={pickerOpen}
                 onClick={() => setPickerOpen((value) => !value)}
               >
@@ -616,7 +638,15 @@ export default function StudioPage({ onExit }) {
           <ViewerToolbar
             meshItems={models.map((model) => model.object).filter(Boolean)}
             brightness={brightness}
-            onBrightness={setBrightness}
+            onBrightness={(value) =>
+              setBrightness(Math.min(Math.max(0, value), brightnessMax))
+            }
+            brightnessMax={brightnessMax}
+            onBrightnessMax={(value) => {
+              const max = Math.min(Math.max(1, Math.round(value)), 1000);
+              setBrightnessMax(max);
+              setBrightness((current) => Math.min(current, max));
+            }}
             onReset={resetScene}
             disable={["random", "camera"]}
             view={view}
@@ -642,7 +672,6 @@ export default function StudioPage({ onExit }) {
         selected={selected}
         onSelect={setSelected}
         onToggleModel={toggleModel}
-        onRemove={removeModel}
         onInsert={insertLibrary}
         onPrimitive={insertPrimitive}
         onLight={insertLight}
@@ -660,6 +689,7 @@ export default function StudioPage({ onExit }) {
           focusApi={focusApi}
           onNotice={setNotice}
           onDelete={removeSelection}
+          onRename={renameSelection}
           onClose={() => setInspectorOpen(false)}
         />
       )}

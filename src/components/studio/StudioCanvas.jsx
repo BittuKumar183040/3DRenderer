@@ -279,6 +279,7 @@ export default function StudioCanvas({
   readyKey,
   selected,
   transformMode,
+  scenePanelOpen,
   cursorApi,
   focusApi,
   onSelect,
@@ -360,7 +361,7 @@ export default function StudioCanvas({
       <IsolateObject enabled={view.isolate} root={sceneRoot} selected={selected} />
       <SceneCapture onScene={onScene} />
       <SelectionOutline object={selected} />
-      <Gizmo />
+      <Gizmo leftPanelOpen={scenePanelOpen} />
       <FrameAll models={models} readyKey={readyKey} fitKey={fitKey} />
     </Canvas>
   );
@@ -383,6 +384,7 @@ StudioCanvas.propTypes = {
   readyKey: PropTypes.string.isRequired,
   selected: PropTypes.object,
   transformMode: PropTypes.oneOf(["translate", "rotate", "scale"]).isRequired,
+  scenePanelOpen: PropTypes.bool,
   cursorApi: PropTypes.shape({ current: PropTypes.any }),
   focusApi: PropTypes.shape({ current: PropTypes.any }),
   onSelect: PropTypes.func.isRequired,

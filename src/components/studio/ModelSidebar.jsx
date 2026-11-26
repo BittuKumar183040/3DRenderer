@@ -87,6 +87,16 @@ function NodeRow({ node, depth, selected, onSelect, onToggleNode, onRefresh }) {
           onClick={(event) => {
             event.stopPropagation();
             onToggleNode(node);
+            // A hidden object must never stay selected, otherwise it can be
+            // dragged around while invisible.
+            if (!node.visible) {
+              for (let current = selected; current; current = current.parent) {
+                if (current === node) {
+                  onSelect(null);
+                  break;
+                }
+              }
+            }
             onRefresh();
           }}
         >
@@ -129,7 +139,6 @@ export default function ModelSidebar({
   selected,
   onSelect,
   onToggleModel,
-  onRemove,
   onInsert,
   onPrimitive,
   onLight,
@@ -218,10 +227,6 @@ export default function ModelSidebar({
 
       <ResourceManager
         models={models}
-        selected={selected}
-        onSelect={onSelect}
-        onToggle={onToggleModel}
-        onRemove={onRemove}
         onInsert={onInsert}
         onPrimitive={onPrimitive}
         onLight={onLight}
@@ -241,7 +246,6 @@ ModelSidebar.propTypes = {
   selected: PropTypes.object,
   onSelect: PropTypes.func.isRequired,
   onToggleModel: PropTypes.func.isRequired,
-  onRemove: PropTypes.func.isRequired,
   onInsert: PropTypes.func.isRequired,
   onPrimitive: PropTypes.func.isRequired,
   onLight: PropTypes.func.isRequired,

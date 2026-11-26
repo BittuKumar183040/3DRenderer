@@ -379,6 +379,35 @@
   text-align: right;
 }
 
+.st-range-max-label {
+  color: #a1a4b0;
+  font-size: 8.5px;
+  font-weight: 650;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.st-range-max {
+  width: 38px;
+  height: 22px;
+  padding: 0 3px;
+  border: 1px solid #e8e5f3;
+  border-radius: 6px;
+  background: #fff;
+  color: #4e5160;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.st-range-max:focus {
+  outline: none;
+  border-color: #a99cf3;
+  box-shadow: 0 0 0 2px rgba(118, 103, 223, 0.13);
+}
+
 .st-divider {
   width: 1px;
   height: 18px;
@@ -1490,6 +1519,13 @@
 
   .st-range input[type='range'] {
     width: 58px;
+  }
+
+  /* The narrow toolbar is already full; the custom maximum is a desktop
+     control, the slider still spans 0–10 on phones. */
+  .st-range-max,
+  .st-range-max-label {
+    display: none;
   }
 
   .st-btn {

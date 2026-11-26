@@ -14,6 +14,8 @@ export default function ViewerToolbar({
   meshItems,
   brightness,
   onBrightness,
+  brightnessMax = 10,
+  onBrightnessMax,
   onReset,
   onRandom,
   disable = [],
@@ -74,19 +76,35 @@ export default function ViewerToolbar({
         <BiReset size={17} />
       </button>
 
-      <label className="st-range">
+      <div className="st-range">
         <Sun size={13} />
         <span>Brightness</span>
         <input
           type="range"
-          min={1}
-          max={10}
+          min={0}
+          max={brightnessMax}
           value={brightness}
           onChange={(event) => onBrightness(Number(event.target.value))}
           aria-label="Brightness"
         />
         <b>{brightness}</b>
-      </label>
+        {onBrightnessMax && (
+          <>
+            <span className="st-range-max-label">max</span>
+            <input
+              className="st-range-max"
+              type="number"
+              min={1}
+              max={1000}
+              step={1}
+              value={brightnessMax}
+              aria-label="Maximum brightness"
+              title="Highest brightness value available on the slider"
+              onChange={(event) => onBrightnessMax(Number(event.target.value))}
+            />
+          </>
+        )}
+      </div>
 
       <span className="st-divider" aria-hidden="true" />
 
@@ -151,6 +169,8 @@ ViewerToolbar.propTypes = {
   meshItems: PropTypes.object,
   brightness: PropTypes.number.isRequired,
   onBrightness: PropTypes.func.isRequired,
+  brightnessMax: PropTypes.number,
+  onBrightnessMax: PropTypes.func,
   onReset: PropTypes.func.isRequired,
   onRandom: PropTypes.func,
   disable: PropTypes.arrayOf(PropTypes.string),

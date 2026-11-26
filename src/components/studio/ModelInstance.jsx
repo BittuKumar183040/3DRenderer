@@ -61,7 +61,6 @@ export default function ModelInstance({
     model.curve,
     model.text,
     model.id,
-    model.name,
     onError,
   ]);
 
@@ -79,6 +78,11 @@ export default function ModelInstance({
       position={position}
       userData={{ studioModelId: model.id }}
       onClick={(event) => {
+        // Raycasting still hits invisible meshes, so walk up the parents and
+        // ignore clicks on anything the user has hidden.
+        for (let node = event.object; node; node = node.parent) {
+          if (!node.visible) return;
+        }
         event.stopPropagation();
         onSelect(event.object);
       }}
