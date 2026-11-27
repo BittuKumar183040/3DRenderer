@@ -82,6 +82,7 @@ export default function StudioPage({ onExit }) {
     wireframe: false,
     autoRotate: false,
     cursor: true,
+    helpers: true,
   });
 
   const [sceneOpen, setSceneOpen] = useState(!compact);

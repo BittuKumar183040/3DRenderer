@@ -1,11 +1,10 @@
 import * as THREE from "three";
 
 /**
- * Lamps that can be dropped into a scene. Each one is a small group with the
- * real light plus a marker sphere, so a lamp is visible in the viewport,
- * selectable in the tree and removable like any other object. The light and
- * its marker are internal helpers, so the scene tree shows the lamp as a single
- * row instead of listing every piece it is built from.
+ * Lamps that can be dropped into a scene. Each one is a small group holding the
+ * real light (and its target), so a lamp is one scene-tree row. Where the light
+ * sits and what it points at is shown by the world-space helper overlay in the
+ * viewport, not by a marker mesh baked into the object.
  */
 export const LIGHTS = [
   { key: "point", label: "Point" },
@@ -18,16 +17,6 @@ export const LIGHTS = [
 function helper(node) {
   node.userData = { ...node.userData, studioHelper: true };
   return node;
-}
-
-function marker(color) {
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.13, 18, 12),
-    new THREE.MeshBasicMaterial({ color, toneMapped: false })
-  );
-  mesh.name = "Light marker";
-  mesh.userData = { studioHelper: true, studioMarker: true };
-  return mesh;
 }
 
 /** Sensible slider ranges per lamp type, shared with the light inspector. */
@@ -58,9 +47,6 @@ function createLightObject(key) {
       group.add(helper(light));
       group.add(helper(light.target));
       light.target.position.set(0, 0, 0);
-      const bulb = marker("#f7c257");
-      bulb.position.copy(light.position);
-      group.add(bulb);
       group.userData = { studioLight: "spot" };
       return { group, name: "Spot light" };
     }
@@ -78,9 +64,6 @@ function createLightObject(key) {
       group.add(helper(light));
       group.add(helper(light.target));
       light.target.position.set(0, 0, 0);
-      const bulb = marker("#ffe3a1");
-      bulb.position.copy(light.position);
-      group.add(bulb);
       group.userData = { studioLight: "sun" };
       return { group, name: "Sun light" };
     }
@@ -88,9 +71,6 @@ function createLightObject(key) {
       const light = new THREE.AmbientLight("#dfe4f5", 1.1);
       const group = new THREE.Group();
       group.add(helper(light));
-      const bulb = marker("#cfd7f5");
-      bulb.position.set(0, 2, 0);
-      group.add(bulb);
       group.userData = { studioLight: "ambient" };
       return { group, name: "Ambient light" };
     }
@@ -101,9 +81,6 @@ function createLightObject(key) {
       configureShadow(light, 1024);
       const group = new THREE.Group();
       group.add(helper(light));
-      const bulb = marker("#f7c257");
-      bulb.position.copy(light.position);
-      group.add(bulb);
       group.userData = { studioLight: "point" };
       return { group, name: "Point light" };
     }

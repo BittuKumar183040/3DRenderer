@@ -27,6 +27,7 @@ import {
 import ExportMenu from "./ExportMenu";
 import ParamFields from "./ParamFields";
 import LightSection from "./LightSection";
+import AnimationPanel from "../renderer/Studio/shell/AnimationPanel";
 import { downloadBlob, slug } from "./exportScene";
 import { PRIMITIVE_FIELDS, reshapePrimitive } from "./primitives";
 import { CURVE_FIELDS, reshapeCurve } from "./curves";
@@ -269,6 +270,15 @@ export default function SelectionPanel({
   const primitive = object.userData?.studioPrimitive;
   const curve = object.userData?.studioCurve;
   const textParams = object.userData?.studioText;
+  // Imported clips live on the model root, so a selected child mesh still
+  // reaches the mixer through its ancestors.
+  let animationRoot = null;
+  for (let current = object; current; current = current.parent) {
+    if (current.userData?.studioMixer) {
+      animationRoot = current;
+      break;
+    }
+  }
   let light = null;
   object.traverse?.((node) => {
     if (!light && node.isLight) light = node;
@@ -871,6 +881,21 @@ export default function SelectionPanel({
             </div>
           ))}
         </section>
+
+        {animationRoot && (
+          <section className="inspector-section">
+            <h3>Animation</h3>
+            <AnimationPanel
+              mixer={animationRoot.userData.studioMixer}
+              clips={animationRoot.userData.studioAnimations || []}
+              inline
+              autoPlay={false}
+            />
+            <p className="inspector-hint">
+              Clips come from the imported file and loop on the timeline.
+            </p>
+          </section>
+        )}
 
         {light && <LightSection object={object} root={root} />}
 

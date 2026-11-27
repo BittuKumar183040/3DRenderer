@@ -5,11 +5,18 @@ import {
   ArrowRight,
   ArrowUpRight,
   Box,
+  Boxes,
   ChevronRight,
+  Download,
   FileImage,
   FileUp,
   Grid2X2,
+  Layers3,
+  Lightbulb,
+  Play,
+  RotateCw,
   Search,
+  ShieldCheck,
   Sparkles,
   UploadCloud,
 } from "lucide-react";
@@ -34,6 +41,59 @@ const DEMOS = [
   { key: "break", label: "Paddle analysis", ext: "VTK", kind: "Scientific", img: breakPaddle, color: "rose" },
   { key: "custom", label: "Shader playground", ext: "SHADER", kind: "Live shader", img: customShaderImg, color: "dark" },
 ];
+
+const STUDIO_FEATURES = [
+  {
+    key: "scene",
+    Icon: Boxes,
+    title: "Scene building",
+    copy: "Start on a blank grid, then drop a model or add meshes, lamps, curves and 3D text wherever the cursor sits.",
+  },
+  {
+    key: "edit",
+    Icon: RotateCw,
+    title: "Direct manipulation",
+    copy: "Move, rotate and scale with viewport gizmos, then duplicate, group, boolean, extrude, subdivide or mirror.",
+  },
+  {
+    key: "look",
+    Icon: Lightbulb,
+    title: "Materials and light",
+    copy: "Stack material slots, apply presets, drop in textures and place point, spot, sun or ambient lamps.",
+  },
+  {
+    key: "animation",
+    Icon: Play,
+    title: "Animation playback",
+    copy: "GLB, GLTF and FBX files that carry clips get a timeline with clip switching, scrubbing and speed control.",
+  },
+  {
+    key: "selection",
+    Icon: Layers3,
+    title: "Multi-selection",
+    copy: "Shift-click to build a selection, then align, drop to the ground or edit every object from one panel.",
+  },
+  {
+    key: "export",
+    Icon: Download,
+    title: "Export and capture",
+    copy: "Send the scene out as GLB, GLTF, OBJ, STL or PLY, or save a clean PNG of exactly what the camera sees.",
+  },
+  {
+    key: "view",
+    Icon: Grid2X2,
+    title: "Camera and grid",
+    copy: "Frame any selection, jump to ISO, front, top or right views and toggle grid, wireframe and isolate.",
+  },
+  {
+    key: "privacy",
+    Icon: ShieldCheck,
+    title: "Stays on device",
+    copy: "Files open locally in the browser. Nothing is uploaded, nothing is stored and no account is needed.",
+  },
+];
+
+const STUDIO_FLOW = ["Import a file", "Compose and light", "Refine the mesh", "Export or capture"];
 
 const FileUpload = ({ fileData, onOpenStudio = () => {} }) => {
   const inputRef = useRef(null);
@@ -142,6 +202,7 @@ const FileUpload = ({ fileData, onOpenStudio = () => {} }) => {
         <button className="nav-studio" type="button" onClick={onOpenStudio}>
           <Box size={13} /> <span>Studio</span>
         </button>
+        <a className="nav-link" href="#studio">Studio guide <ArrowRight size={13} /></a>
         <a className="nav-link" href="#library">Library <ArrowRight size={13} /></a>
         <button className="nav-cta" type="button" onClick={openPicker}>
           <UploadCloud size={14} /> Open file
@@ -255,9 +316,109 @@ const FileUpload = ({ fileData, onOpenStudio = () => {} }) => {
       )}
     </section>
 
+    <section className="studio-showcase" id="studio">
+      <div className="showcase-head">
+        <div className="showcase-copy">
+          <div className="eyebrow small"><Sparkles size={13} /> THE BEXYZO STUDIO</div>
+          <h2>A full 3D workspace, right in the browser.</h2>
+          <p>
+            The studio is a blank canvas for assembling a scene without a desktop
+            install. Bring in a GLB, GLTF, FBX, OBJ, STL, PLY or SVG file, or start
+            from primitives, then place, light, edit and export it — all in one
+            viewport that never uploads your work.
+          </p>
+          <div className="showcase-actions">
+            <button className="primary-button" type="button" onClick={onOpenStudio}>
+              <Box size={16} /> Open the studio
+              <span className="button-shine" aria-hidden="true" />
+            </button>
+            <button className="ghost-button" type="button" onClick={openPicker}>
+              <FileUp size={15} /> Bring a model
+            </button>
+          </div>
+        </div>
+        <div className="showcase-stats">
+          <div><b>7</b><span>file formats in one canvas</span></div>
+          <div><b>5</b><span>object families to add</span></div>
+          <div><b>0</b><span>files uploaded, ever</span></div>
+        </div>
+      </div>
+
+      <div className="showcase-grid">
+        {STUDIO_FEATURES.map(({ key, Icon, title, copy }) => (
+          <article className="showcase-card" key={key}>
+            <span className="showcase-icon"><Icon size={16} /></span>
+            <h3>{title}</h3>
+            <p>{copy}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="showcase-flow" aria-label="Studio workflow">
+        {STUDIO_FLOW.map((step, index) => (
+          <div className="showcase-step" key={step}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <b>{step}</b>
+            {index < STUDIO_FLOW.length - 1 && <ArrowRight size={14} aria-hidden="true" />}
+          </div>
+        ))}
+      </div>
+    </section>
+
     <footer className="studio-footer">
-      <span>© {new Date().getFullYear()} <a href="https://Bexyzo.betoo.co.in" target="_blank" rel="noreferrer">Bexyzo.betoo.co.in</a></span>
-      <span>GLB · FBX · SVG · VTK · GLSL</span>
+      <div className="footer-main">
+        <div className="footer-brand">
+          <a className="brand" href="#home" aria-label="Bexyzo home">
+            <span className="brand-mark"><Box size={18} /></span>
+            <span className="brand-name">Bexyzo<span className="brand-dot">.</span></span>
+          </a>
+          <p>
+            A browser-native 3D workspace for models, vector art, scientific data
+            and shader experiments. No installs, no uploads, no waiting.
+          </p>
+          <div className="footer-badges">
+            <span>Runs locally</span>
+            <span>No account needed</span>
+            <span>Free to use</span>
+          </div>
+        </div>
+
+        <div className="footer-col">
+          <h4>Workspace</h4>
+          <button type="button" onClick={onOpenStudio}>Studio canvas</button>
+          <a href="#studio">What the studio does</a>
+          <a href="#library">Asset library</a>
+          <button type="button" onClick={openPicker}>Open a file</button>
+        </div>
+
+        <div className="footer-col">
+          <h4>Formats</h4>
+          <span>GLB · GLTF</span>
+          <span>FBX · OBJ · STL · PLY</span>
+          <span>SVG vectors</span>
+          <span>VTK scientific data</span>
+          <span>GLSL shaders</span>
+        </div>
+
+        <div className="footer-col">
+          <h4>Under the hood</h4>
+          <span>Three.js + React</span>
+          <span>WebGL rendering</span>
+          <span>Opentype 3D text</span>
+          <span>CSG booleans</span>
+        </div>
+      </div>
+
+      <div className="footer-bottom">
+        <span>
+          © {new Date().getFullYear()}{" "}
+          <a href="https://Bexyzo.betoo.co.in" target="_blank" rel="noreferrer">
+            Bexyzo.betoo.co.in
+          </a>
+          · Built for the browser
+        </span>
+        <span>Your files stay on your device · GLB · FBX · SVG · VTK · GLSL</span>
+      </div>
     </footer>
 
     {pageDragging && (

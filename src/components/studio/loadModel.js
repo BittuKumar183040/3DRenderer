@@ -62,42 +62,53 @@ function svgToGroup(data) {
 async function load(url, format) {
   switch (format) {
     case "glb":
-    case "gltf":
-      return (await new GLTFLoader().loadAsync(url)).scene;
-    case "fbx":
-      return new FBXLoader().loadAsync(url);
+    case "gltf": {
+      const gltf = await new GLTFLoader().loadAsync(url);
+      return { scene: gltf.scene, animations: gltf.animations || [] };
+    }
+    case "fbx": {
+      const fbx = await new FBXLoader().loadAsync(url);
+      return { scene: fbx, animations: fbx.animations || [] };
+    }
     case "obj":
-      return new OBJLoader().loadAsync(url);
+      return { scene: await new OBJLoader().loadAsync(url), animations: [] };
     case "stl":
-      return meshFromGeometry(await new STLLoader().loadAsync(url), "STL mesh");
+      return {
+        scene: meshFromGeometry(await new STLLoader().loadAsync(url), "STL mesh"),
+        animations: [],
+      };
     case "ply": {
       const geometry = await new PLYLoader().loadAsync(url);
-      return meshFromGeometry(geometry, "PLY mesh", {
-        vertexColors: geometry.hasAttribute("color"),
-      });
+      return {
+        scene: meshFromGeometry(geometry, "PLY mesh", {
+          vertexColors: geometry.hasAttribute("color"),
+        }),
+        animations: [],
+      };
     }
     case "svg":
-      return svgToGroup(await new SVGLoader().loadAsync(url));
+      return { scene: svgToGroup(await new SVGLoader().loadAsync(url)), animations: [] };
     default:
       throw new Error(`.${format} files are not supported`);
   }
 }
 
 /**
- * Loads a model once per source and format. Callers clone the returned root for
- * every insertion, so a model can be placed many times in the same scene.
+ * Loads a model once per source and format. Callers clone the returned scene
+ * for every insertion, so a model can be placed many times in the same scene.
+ * Animation clips travel with the load so the studio can offer playback.
  */
 export function loadModel(url, format) {
   const key = `${format}:${url}`;
   if (!cache.has(key)) {
-    const request = load(url, format).then((root) => {
-      if (!root) throw new Error("the file did not contain a scene");
-      root.traverse?.((node) => {
+    const request = load(url, format).then((loaded) => {
+      if (!loaded?.scene) throw new Error("the file did not contain a scene");
+      loaded.scene.traverse?.((node) => {
         if (!node.isMesh) return;
         node.castShadow = true;
         node.receiveShadow = true;
       });
-      return root;
+      return loaded;
     });
     request.catch(() => cache.delete(key));
     cache.set(key, request);

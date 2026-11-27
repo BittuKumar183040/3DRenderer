@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { Canvas } from "@react-three/fiber";
 import { Bounds, Grid, OrbitControls, useGLTF } from "@react-three/drei";
@@ -11,10 +11,11 @@ import SceneCapture from "../shell/SceneCapture";
 import CameraRig from "../shell/CameraRig";
 import IsolateObject from "../shell/IsolateObject";
 import Gizmo from "../shell/Gizmo";
+import AnimationPanel, { AnimationTicker } from "../shell/AnimationPanel";
 
 const MODEL_SIZE = 10;
 
-function Model({ fileUrl, setMeshItems, onSelect }) {
+function Model({ fileUrl, setMeshItems, onSelect, onAnimation }) {
   const gltf = useGLTF(fileUrl);
 
   useEffect(() => {
@@ -35,6 +36,18 @@ function Model({ fileUrl, setMeshItems, onSelect }) {
     );
   }, [gltf, setMeshItems]);
 
+  // Clips ride along with the loaded scene; the panel drives the mixer and the
+  // canvas ticks it, so playback survives orbiting and orbiting survives playback.
+  useEffect(() => {
+    const mixer = new THREE.AnimationMixer(gltf.scene);
+    onAnimation(mixer, gltf.animations || []);
+    return () => {
+      mixer.stopAllAction();
+      mixer.uncacheRoot(gltf.scene);
+      onAnimation(null, []);
+    };
+  }, [gltf, onAnimation]);
+
   return (
     <primitive
       object={gltf.scene}
@@ -50,6 +63,7 @@ Model.propTypes = {
   fileUrl: PropTypes.string.isRequired,
   setMeshItems: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
+  onAnimation: PropTypes.func.isRequired,
 };
 
 const GltfViewer = ({ file: { file, name }, onExit }) => {
@@ -60,6 +74,7 @@ const GltfViewer = ({ file: { file, name }, onExit }) => {
   const [brightness, setBrightness] = useState(2);
   const [fitKey, setFitKey] = useState(0);
   const [cameraView, setCameraView] = useState({ dir: "iso", n: 0 });
+  const [animation, setAnimation] = useState({ mixer: null, clips: [] });
   const [view, setView] = useState({
     grid: true,
     isolate: false,
@@ -91,6 +106,10 @@ const GltfViewer = ({ file: { file, name }, onExit }) => {
     });
   }, [meshItems, view.wireframe]);
 
+  const handleAnimation = useCallback((mixer, clips) => {
+    setAnimation({ mixer, clips: mixer ? clips : [] });
+  }, []);
+
   const toggleView = (key) =>
     setView((current) => ({ ...current, [key]: !current[key] }));
 
@@ -110,7 +129,12 @@ const GltfViewer = ({ file: { file, name }, onExit }) => {
       selected={selected}
       onSelect={setSelected}
       onClearSelection={() => setSelected(null)}
-      overlay={<LoadingOverlay name={name} />}
+      overlay={
+        <>
+          <LoadingOverlay name={name} />
+          <AnimationPanel mixer={animation.mixer} clips={animation.clips} />
+        </>
+      }
       toolbar={
         <ViewerToolbar
           meshItems={meshItems}
@@ -136,10 +160,16 @@ const GltfViewer = ({ file: { file, name }, onExit }) => {
           <directionalLight position={[-200, -300, 400]} intensity={brightness * 4} />
           <OrbitControls makeDefault autoRotate={view.autoRotate} autoRotateSpeed={1.4} />
           <CameraRig view={cameraView} />
+          <AnimationTicker mixers={animation.mixer ? [animation.mixer] : []} />
           <Bounds key={`fit-${fitKey}`} fit observe margin={3}>
             <Suspense fallback={null}>
               {fileUrl && (
-                <Model fileUrl={fileUrl} setMeshItems={setMeshItems} onSelect={setSelected} />
+                <Model
+                  fileUrl={fileUrl}
+                  setMeshItems={setMeshItems}
+                  onSelect={setSelected}
+                  onAnimation={handleAnimation}
+                />
               )}
             </Suspense>
           </Bounds>

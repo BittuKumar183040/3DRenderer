@@ -8,7 +8,9 @@ import Gizmo from "../renderer/Studio/shell/Gizmo";
 import IsolateObject from "../renderer/Studio/shell/IsolateObject";
 import SceneCapture from "../renderer/Studio/shell/SceneCapture";
 import SelectionOutline from "../renderer/Studio/shell/SelectionOutline";
+import { AnimationTicker } from "../renderer/Studio/shell/AnimationPanel";
 import ModelInstance from "./ModelInstance";
+import SceneHelpers from "./SceneHelpers";
 import { consumePointerDrag } from "./pointerDrag";
 import Cursor3D from "./Cursor3D";
 import TransformGizmo from "./TransformGizmo";
@@ -117,7 +119,16 @@ function CursorPointer({ objects, enabled, onPlace, onHold }) {
       raycaster.setFromCamera(pointer, camera);
       const targets = objectsRef.current.filter(Boolean);
       const hits = targets.length ? raycaster.intersectObjects(targets, true) : [];
-      const surface = hits.find((hit) => hit.object.isMesh && hit.object.visible);
+      // Gizmos are drawn on top, so the cursor must land on real geometry.
+      const isGizmo = (object) => {
+        for (let node = object; node; node = node.parent) {
+          if (node.name === "Studio helpers") return true;
+        }
+        return false;
+      };
+      const surface = hits.find(
+        (hit) => hit.object.isMesh && hit.object.visible && !isGizmo(hit.object)
+      );
       if (surface) return surface.point.clone();
       const point = new THREE.Vector3();
       if (!raycaster.ray.intersectPlane(ground, point)) return null;
@@ -239,8 +250,21 @@ function FocusBridge({ apiRef }) {
         if (!object || !controls) return;
         object.updateWorldMatrix(true, false);
         const box = new THREE.Box3().setFromObject(object);
-        if (box.isEmpty()) return;
-        const sphere = box.getBoundingSphere(new THREE.Sphere());
+        const sphere = new THREE.Sphere();
+        if (box.isEmpty()) {
+          // Lamps and cameras carry no geometry; frame the gizmo position
+          // instead of refusing to move the camera.
+          let anchor = null;
+          object.traverse((node) => {
+            if (!anchor && (node.isLight || node.isCamera)) anchor = node;
+          });
+          const center = new THREE.Vector3();
+          if (anchor) anchor.getWorldPosition(center);
+          else object.getWorldPosition(center);
+          sphere.set(center, 0.9);
+        } else {
+          box.getBoundingSphere(sphere);
+        }
         const direction = camera.position.clone().sub(controls.target);
         if (direction.lengthSq() < 1e-6) direction.set(1, 0.72, 1);
         direction.normalize();
@@ -296,6 +320,10 @@ export default function StudioCanvas({
   const gridRef = useRef(null);
   const objects = useMemo(
     () => models.map((model) => model.object).filter(Boolean),
+    [models]
+  );
+  const mixers = useMemo(
+    () => models.map((model) => model.object?.userData?.studioMixer).filter(Boolean),
     [models]
   );
 
@@ -381,6 +409,11 @@ export default function StudioCanvas({
         />
       )}
 
+      {view.helpers && (
+        <SceneHelpers models={models} selected={selected} onSelect={onSelect} />
+      )}
+      <AnimationTicker mixers={mixers} />
+
       <Cursor3D position={cursor} visible={view.cursor} />
       <CursorPointer
         objects={objects}
@@ -413,6 +446,7 @@ StudioCanvas.propTypes = {
     wireframe: PropTypes.bool,
     autoRotate: PropTypes.bool,
     cursor: PropTypes.bool,
+    helpers: PropTypes.bool,
   }).isRequired,
   cursor: PropTypes.arrayOf(PropTypes.number).isRequired,
   cameraView: PropTypes.shape({ dir: PropTypes.string, n: PropTypes.number }).isRequired,

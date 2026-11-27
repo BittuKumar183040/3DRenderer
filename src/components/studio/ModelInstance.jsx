@@ -60,9 +60,18 @@ export default function ModelInstance({
     const loading = !model.builtObject && !model.primitive && !model.light && !model.curve && !model.text && !model.textOptions;
     if (loading) {
       loadModel(model.url, model.ext)
-        .then((root) => {
+        .then((loaded) => {
           if (!active) return;
-          const placed = normalizeModel(cloneSkeleton(root));
+          // SkeletonUtils keeps skinned meshes bound to their bones, which is
+          // also what makes animated clips work on the copy.
+          const placed = normalizeModel(cloneSkeleton(loaded.scene));
+          if (loaded.animations?.length) {
+            placed.userData = {
+              ...placed.userData,
+              studioAnimations: loaded.animations,
+              studioMixer: new THREE.AnimationMixer(placed),
+            };
+          }
           placed.position.add(offset);
           setObject(placed);
         })

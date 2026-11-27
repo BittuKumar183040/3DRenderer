@@ -18,16 +18,6 @@ const rangeFor = (light) => {
   return LIGHT_RANGES.point;
 };
 
-/** Keeps the marker sphere in sync so the lamp reads as the colour it emits. */
-function paintMarker(light, hex) {
-  const group = light.parent;
-  group?.traverse?.((node) => {
-    if (node.userData?.studioMarker && node.material?.color) {
-      node.material.color.set(hex);
-    }
-  });
-}
-
 const nameOf = (light) =>
   light.parent?.name || `${typeLabel(light)} light`;
 
@@ -78,7 +68,6 @@ export default function LightSection({ object, root }) {
           value={hex}
           onChange={(event) => {
             active.color.set(event.target.value);
-            paintMarker(active, event.target.value);
             update();
           }}
         />

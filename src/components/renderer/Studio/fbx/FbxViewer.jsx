@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -17,10 +17,11 @@ import SceneCapture from "../shell/SceneCapture";
 import CameraRig from "../shell/CameraRig";
 import IsolateObject from "../shell/IsolateObject";
 import Gizmo from "../shell/Gizmo";
+import AnimationPanel, { AnimationTicker } from "../shell/AnimationPanel";
 
 const MODEL_SIZE = 10;
 
-function Model({ fileUrl, setMeshItems, onSelect, randomSeed }) {
+function Model({ fileUrl, setMeshItems, onSelect, onAnimation, randomSeed }) {
   const fbx = useFBX(fileUrl);
 
   useEffect(() => {
@@ -40,6 +41,19 @@ function Model({ fileUrl, setMeshItems, onSelect, randomSeed }) {
       -center.z * scaleFactor
     );
   }, [fbx, setMeshItems]);
+
+  // FBX clips come from the loaded file. Playback is handed to the animation
+  // panel while this canvas keeps ticking the mixer.
+  useEffect(() => {
+    if (!fbx) return undefined;
+    const mixer = new THREE.AnimationMixer(fbx);
+    onAnimation(mixer, fbx.animations || []);
+    return () => {
+      mixer.stopAllAction();
+      mixer.uncacheRoot(fbx);
+      onAnimation(null, []);
+    };
+  }, [fbx, onAnimation]);
 
   // Applies random colours when the toolbar asks for it. Runs as an effect so
   // the loader hook is never called from an event handler.
@@ -70,6 +84,7 @@ Model.propTypes = {
   fileUrl: PropTypes.string.isRequired,
   setMeshItems: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
+  onAnimation: PropTypes.func.isRequired,
   randomSeed: PropTypes.number,
 };
 
@@ -81,6 +96,7 @@ const FbxViewer = ({ file: { file, name }, onExit }) => {
   const [brightness, setBrightness] = useState(2);
   const [fitKey, setFitKey] = useState(0);
   const [randomSeed, setRandomSeed] = useState(0);
+  const [animation, setAnimation] = useState({ mixer: null, clips: [] });
   const [cameraView, setCameraView] = useState({ dir: "iso", n: 0 });
   const [view, setView] = useState({
     grid: true,
@@ -113,6 +129,10 @@ const FbxViewer = ({ file: { file, name }, onExit }) => {
     });
   }, [meshItems, view.wireframe]);
 
+  const handleAnimation = useCallback((mixer, clips) => {
+    setAnimation({ mixer, clips: mixer ? clips : [] });
+  }, []);
+
   const toggleView = (key) =>
     setView((current) => ({ ...current, [key]: !current[key] }));
 
@@ -132,7 +152,12 @@ const FbxViewer = ({ file: { file, name }, onExit }) => {
       selected={selected}
       onSelect={setSelected}
       onClearSelection={() => setSelected(null)}
-      overlay={<LoadingOverlay name={name} />}
+      overlay={
+        <>
+          <LoadingOverlay name={name} />
+          <AnimationPanel mixer={animation.mixer} clips={animation.clips} />
+        </>
+      }
       toolbar={
         <ViewerToolbar
           meshItems={meshItems}
@@ -156,6 +181,7 @@ const FbxViewer = ({ file: { file, name }, onExit }) => {
           <ambientLight intensity={brightness} />
           <PerspectiveCamera makeDefault position={[0, 100, 250]} fov={75} />
           <OrbitControls makeDefault autoRotate={view.autoRotate} autoRotateSpeed={1.4} />
+          <AnimationTicker mixers={animation.mixer ? [animation.mixer] : []} />
           <CameraRig view={cameraView} />
           <Bounds key={`fit-${fitKey}`} fit margin={2} observe>
             {fileUrl && (
@@ -163,6 +189,7 @@ const FbxViewer = ({ file: { file, name }, onExit }) => {
                 fileUrl={fileUrl}
                 setMeshItems={setMeshItems}
                 onSelect={setSelected}
+                onAnimation={handleAnimation}
                 randomSeed={randomSeed}
               />
             )}

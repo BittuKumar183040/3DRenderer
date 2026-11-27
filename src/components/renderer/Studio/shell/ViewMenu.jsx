@@ -76,6 +76,19 @@ export default function ViewMenu({ view, onChange, onCameraView, canIsolate }) {
           <span>Show grid</span>
           <i className={view.grid ? "is-on" : ""} />
         </button>
+        {view.helpers !== undefined && (
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={view.helpers}
+            className="view-switch"
+            title="Show where lamps and cameras sit in the scene"
+            onClick={() => onChange("helpers")}
+          >
+            <span>Light &amp; camera helpers</span>
+            <i className={view.helpers ? "is-on" : ""} />
+          </button>
+        )}
         <button
           type="button"
           role="menuitemcheckbox"
@@ -97,6 +110,7 @@ ViewMenu.propTypes = {
   view: PropTypes.shape({
     grid: PropTypes.bool,
     isolate: PropTypes.bool,
+    helpers: PropTypes.bool,
   }).isRequired,
   onChange: PropTypes.func.isRequired,
   onCameraView: PropTypes.func.isRequired,
