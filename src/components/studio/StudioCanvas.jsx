@@ -293,10 +293,25 @@ export default function StudioCanvas({
   onCursorHold,
 }) {
   const gizmoBusy = useRef(false);
+  const gridRef = useRef(null);
   const objects = useMemo(
     () => models.map((model) => model.object).filter(Boolean),
     [models]
   );
+
+  // The grid is a transparent plane sitting a hair below y=0. Nudging it down
+  // and pushing it back in depth keeps coplanar ground meshes (a freshly added
+  // plane, for example) from z-fighting with the grid lines, and disabling
+  // depth writes stops the transparent grid from occluding anything.
+  useEffect(() => {
+    const material = gridRef.current?.material;
+    if (!material) return;
+    material.polygonOffset = true;
+    material.polygonOffsetFactor = 1;
+    material.polygonOffsetUnits = 1;
+    material.depthWrite = false;
+    material.needsUpdate = true;
+  }, [view.grid]);
 
   const handleBusy = useCallback((busy) => {
     gizmoBusy.current = busy;
@@ -331,17 +346,6 @@ export default function StudioCanvas({
       />
       <directionalLight position={[-8, 5, -6]} intensity={brightness * 0.7} />
 
-      {/* Transparent catcher so every mesh drops a soft contact shadow onto
-          the ground without hiding the grid. It never takes pointer hits. */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.004, 0]}
-        receiveShadow
-        raycast={() => {}}
-      >
-        <planeGeometry args={[400, 400]} />
-        <shadowMaterial transparent opacity={0.2} />
-      </mesh>
       <OrbitControls makeDefault autoRotate={view.autoRotate} autoRotateSpeed={1.2} />
       <CameraRig view={cameraView} />
 
@@ -361,8 +365,10 @@ export default function StudioCanvas({
 
       {view.grid && (
         <Grid
+          ref={gridRef}
           name="Studio grid"
-          position={[0, 0, 0]}
+          position={[0, -0.005, 0]}
+          side={THREE.DoubleSide}
           infiniteGrid
           cellSize={1}
           cellThickness={0.6}
