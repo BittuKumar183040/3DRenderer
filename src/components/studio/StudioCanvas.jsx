@@ -279,6 +279,7 @@ export default function StudioCanvas({
   fitKey,
   readyKey,
   selected,
+  selection,
   transformMode,
   scenePanelOpen,
   cursorApi,
@@ -303,19 +304,44 @@ export default function StudioCanvas({
 
   return (
     <Canvas
+      shadows
       dpr={[1, 2]}
-      gl={{ preserveDrawingBuffer: true }}
+      gl={{ preserveDrawingBuffer: true, antialias: true }}
       camera={{ position: [9, 7, 11], fov: 45, near: 0.1, far: 400 }}
-      onPointerMissed={() => {
+      onPointerMissed={(event) => {
         if (consumePointerDrag()) return;
-        if (!gizmoBusy.current) onSelect(null);
+        if (!gizmoBusy.current) onSelect(null, event);
       }}
     >
       <color attach="background" args={["#eef0f6"]} />
       <ambientLight intensity={brightness * 0.55} />
       <hemisphereLight args={["#ffffff", "#bfc4d6", brightness * 0.55]} />
-      <directionalLight position={[6, 10, 7]} intensity={brightness * 1.7} />
+      <directionalLight
+        castShadow
+        position={[6, 10, 7]}
+        intensity={brightness * 1.7}
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0006}
+        shadow-camera-left={-12}
+        shadow-camera-right={12}
+        shadow-camera-top={12}
+        shadow-camera-bottom={-12}
+        shadow-camera-near={0.5}
+        shadow-camera-far={40}
+      />
       <directionalLight position={[-8, 5, -6]} intensity={brightness * 0.7} />
+
+      {/* Transparent catcher so every mesh drops a soft contact shadow onto
+          the ground without hiding the grid. It never takes pointer hits. */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.004, 0]}
+        receiveShadow
+        raycast={() => {}}
+      >
+        <planeGeometry args={[400, 400]} />
+        <shadowMaterial transparent opacity={0.2} />
+      </mesh>
       <OrbitControls makeDefault autoRotate={view.autoRotate} autoRotateSpeed={1.2} />
       <CameraRig view={cameraView} />
 
@@ -362,7 +388,9 @@ export default function StudioCanvas({
 
       <IsolateObject enabled={view.isolate} root={sceneRoot} selected={selected} />
       <SceneCapture onScene={onScene} />
-      <SelectionOutline object={selected} />
+      {(selection?.length ? selection : [selected]).filter(Boolean).map((object) => (
+        <SelectionOutline key={object.uuid} object={object} />
+      ))}
       <Gizmo leftPanelOpen={scenePanelOpen} />
       <FrameAll models={models} readyKey={readyKey} fitKey={fitKey} />
     </Canvas>
@@ -385,6 +413,7 @@ StudioCanvas.propTypes = {
   fitKey: PropTypes.number.isRequired,
   readyKey: PropTypes.string.isRequired,
   selected: PropTypes.object,
+  selection: PropTypes.arrayOf(PropTypes.object),
   transformMode: PropTypes.oneOf(["translate", "rotate", "scale"]).isRequired,
   scenePanelOpen: PropTypes.bool,
   cursorApi: PropTypes.shape({ current: PropTypes.any }),

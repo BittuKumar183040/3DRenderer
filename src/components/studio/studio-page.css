@@ -1412,3 +1412,254 @@
 .studio-export-popover.is-up.is-open {
   transform: none;
 }
+
+/* Add-mesh dialog -------------------------------------------- */
+
+.studio-dialog-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(30, 28, 45, 0.26);
+  backdrop-filter: blur(2px);
+}
+
+.studio-dialog {
+  width: min(430px, 100%);
+  overflow: hidden;
+  border: 1px solid #e8e5f5;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(32, 26, 74, 0.24);
+}
+
+.studio-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 10px;
+}
+
+.studio-dialog-head h2 {
+  margin: 2px 0 0;
+  color: #2f3140;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.studio-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #f1effc;
+  color: #5a48cd;
+}
+
+.studio-dialog-head .panel-close {
+  margin-left: auto;
+}
+
+.studio-dialog .studio-param-grid {
+  padding: 4px 14px 10px;
+}
+
+.studio-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid #f1f1f5;
+  background: #fcfbff;
+}
+
+.studio-param-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--param-columns, 2), minmax(0, 1fr));
+  gap: 8px;
+}
+
+.studio-param {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #8a8e9b;
+  font-size: 10px;
+}
+
+.studio-param input {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #e9e7f2;
+  border-radius: 7px;
+  background: #fbfaff;
+  color: #3c3f4d;
+  font: inherit;
+  font-size: 11px;
+}
+
+.studio-param input:focus {
+  outline: none;
+  border-color: #c9befa;
+  box-shadow: 0 0 0 3px rgba(117, 99, 220, 0.12);
+}
+
+/* Inspector additions: text, shape, lights, multi-select ------ */
+
+.inspector-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  color: #6a6e7c;
+  font-size: 10px;
+}
+
+.inspector-select select {
+  flex: 1;
+  max-width: 66%;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid #e9e7f2;
+  border-radius: 7px;
+  background: #fbfaff;
+  color: #3c3f4d;
+  font: inherit;
+  font-size: 10.5px;
+}
+
+.inspector-text {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.inspector-text textarea {
+  flex: 1;
+  min-height: 44px;
+  padding: 6px 8px;
+  resize: vertical;
+  border: 1px solid #e9e7f2;
+  border-radius: 8px;
+  background: #fbfaff;
+  color: #3c3f4d;
+  font: inherit;
+  font-size: 11px;
+}
+
+.inspector-material.is-compact {
+  margin-top: 8px;
+}
+
+.inspector-section-head.is-sub {
+  margin-top: 12px;
+}
+
+.inspector-section-head.is-sub h4 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: #8a8e9b;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inspector-light-type {
+  color: #9a9dab;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.inspector-light-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.inspector-slider.is-light {
+  grid-template-columns: 104px minmax(0, 1fr) 30px;
+}
+
+.studio-multi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.studio-multi-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border: 1px solid #efedf7;
+  border-radius: 8px;
+  background: #fbfaff;
+  color: #4a4d5c;
+  font-size: 10px;
+}
+
+.studio-multi-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: #f0eefb;
+  color: #7a6ad6;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.studio-multi-badge.is-primary {
+  background: #7563dc;
+  color: #fff;
+}
+
+.studio-multi-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-multi-row small {
+  color: #a2a5b2;
+  font-size: 8.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.studio-multi-remove {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #a3a6b3;
+  cursor: pointer;
+}
+
+.studio-multi-remove:hover {
+  background: #fdecec;
+  color: #d15555;
+}
+
+.studio-page .tree-row.is-selected.is-secondary {
+  background: #f4f1fd;
+  box-shadow: inset 2px 0 0 #b7a9f2;
+}

@@ -94,8 +94,8 @@ export function loadModel(url, format) {
       if (!root) throw new Error("the file did not contain a scene");
       root.traverse?.((node) => {
         if (!node.isMesh) return;
-        node.castShadow = false;
-        node.receiveShadow = false;
+        node.castShadow = true;
+        node.receiveShadow = true;
       });
       return root;
     });

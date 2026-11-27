@@ -1,0 +1,34 @@
+[
+  {
+    "key": "roboto",
+    "bold": true
+  },
+  {
+    "key": "montserrat",
+    "bold": true
+  },
+  {
+    "key": "oswald",
+    "bold": true
+  },
+  {
+    "key": "playfairdisplay",
+    "bold": true
+  },
+  {
+    "key": "spacegrotesk",
+    "bold": true
+  },
+  {
+    "key": "bebasneue",
+    "bold": false
+  },
+  {
+    "key": "lobster",
+    "bold": false
+  },
+  {
+    "key": "pacifico",
+    "bold": false
+  }
+]

@@ -9,18 +9,21 @@ import { createText } from "./texts";
 import { loadModel, normalizeModel } from "./loadModel";
 import { consumePointerDrag } from "./pointerDrag";
 
-/** Locally built objects (mesh, lamp, text, curve) need no file loading. */
+/** Locally built objects (mesh, lamp, text, curve, group) need no file loading. */
 function buildObject(model) {
-  if (model.primitive) return createPrimitive(model.primitive);
+  if (model.builtObject) return model.builtObject;
+  if (model.primitive) return createPrimitive(model.primitive, model.params);
   if (model.light) return createLight(model.light);
-  if (model.curve) return createCurve(model.curve);
-  if (model.text) return createText(model.text);
+  if (model.curve) return createCurve(model.curve, model.params);
+  if (model.text || model.textOptions) {
+    return createText(model.textOptions || model.text);
+  }
   return null;
 }
 
 /**
  * One model placed on the studio canvas — either a loaded file or a built-in
- * primitive. The built or loaded object itself is the model root, so every
+ * object. The built or loaded object itself is the model root, so every
  * insertion is a single scene-tree row instead of a wrapper group around the
  * real object.
  */
@@ -43,24 +46,31 @@ export default function ModelInstance({
     let active = true;
     setObject(null);
     const offset = new THREE.Vector3(...positionRef.current);
-    const built = buildObject(model);
-    if (built) {
-      built.position.add(offset);
-      setObject(built);
-      return () => {
-        active = false;
-      };
-    }
-    loadModel(model.url, model.ext)
-      .then((root) => {
-        if (!active) return;
-        const placed = normalizeModel(cloneSkeleton(root));
-        placed.position.add(offset);
-        setObject(placed);
+
+    Promise.resolve(buildObject(model))
+      .then((built) => {
+        if (!active || !built) return;
+        built.position.add(offset);
+        setObject(built);
       })
       .catch((error) => {
         if (active) onError(model.id, model.name, error?.message);
       });
+
+    const loading = !model.builtObject && !model.primitive && !model.light && !model.curve && !model.text && !model.textOptions;
+    if (loading) {
+      loadModel(model.url, model.ext)
+        .then((root) => {
+          if (!active) return;
+          const placed = normalizeModel(cloneSkeleton(root));
+          placed.position.add(offset);
+          setObject(placed);
+        })
+        .catch((error) => {
+          if (active) onError(model.id, model.name, error?.message);
+        });
+    }
+
     return () => {
       active = false;
     };
@@ -74,6 +84,8 @@ export default function ModelInstance({
     model.light,
     model.curve,
     model.text,
+    model.textOptions,
+    model.builtObject,
     model.id,
     onError,
   ]);
@@ -82,6 +94,13 @@ export default function ModelInstance({
     if (!object) return undefined;
     object.name = model.name;
     object.userData = { ...object.userData, studioModelId: model.id };
+    // Meshes added to the scene take part in the shadow pass; internal helper
+    // parts (lamp markers, light targets) never cast or receive.
+    object.traverse((node) => {
+      if (!node.isMesh || node.userData?.studioHelper) return;
+      node.castShadow = true;
+      node.receiveShadow = true;
+    });
     onReady(model.id, object);
     return () => onDetach(model.id);
   }, [object, model.id, model.name, onReady, onDetach]);
@@ -102,8 +121,8 @@ export default function ModelInstance({
         if (consumePointerDrag()) return;
         event.stopPropagation();
         // The whole inserted object is selected; its parts stay reachable from
-        // the scene tree.
-        onSelect(object);
+        // the scene tree. Shift extends the selection with a secondary object.
+        onSelect(object, event.nativeEvent || event);
       }}
     />
   );
@@ -119,6 +138,9 @@ ModelInstance.propTypes = {
     light: PropTypes.string,
     curve: PropTypes.string,
     text: PropTypes.string,
+    textOptions: PropTypes.object,
+    params: PropTypes.object,
+    builtObject: PropTypes.object,
   }).isRequired,
   position: PropTypes.arrayOf(PropTypes.number).isRequired,
   onReady: PropTypes.func.isRequired,

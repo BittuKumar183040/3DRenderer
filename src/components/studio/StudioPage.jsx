@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
+import * as THREE from "three";
 import { Layers3, Library, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 import ViewerBrand from "../renderer/Studio/shell/ViewerBrand";
 import ViewerToolbar from "../renderer/Studio/shell/ViewerToolbar";
@@ -11,8 +12,18 @@ import CursorMenu from "./CursorMenu";
 import TransformBar from "./TransformBar";
 import ExportMenu from "./ExportMenu";
 import SelectionPanel from "./SelectionPanel";
+import MultiSelectionPanel from "./MultiSelectionPanel";
+import PrimitiveDialog from "./PrimitiveDialog";
 import STUDIO_LIBRARY from "./library";
 import { PRIMITIVES } from "./primitives";
+import {
+  BOOLEAN_LABELS,
+  booleanMeshes,
+  collectMeshes,
+  dropToGround,
+  duplicateObject,
+  extrudeGeometry,
+} from "./meshEdit";
 import {
   MODEL_ACCEPT,
   MODEL_LABEL,
@@ -32,6 +43,21 @@ const nextId = () => {
 
 const roundPoint = (value) => Math.round(value * 100) / 100;
 
+/** Model id of the inserted object a node belongs to, if any. */
+function modelIdOf(node) {
+  for (let current = node; current; current = current.parent) {
+    if (current.userData?.studioModelId) return current.userData.studioModelId;
+  }
+  return null;
+}
+
+const isDescendant = (parent, node) => {
+  for (let current = node?.parent; current; current = current.parent) {
+    if (current === parent) return true;
+  }
+  return false;
+};
+
 /**
  * Blank-canvas studio: insert models (glTF, FBX, OBJ, STL, PLY, SVG) onto a
  * grid, position them at the 3D cursor, transform the selection with the
@@ -42,7 +68,7 @@ export default function StudioPage({ onExit }) {
 
   const [models, setModels] = useState([]);
   const [sceneRoot, setSceneRoot] = useState(null);
-  const [selected, setSelected] = useState(null);
+  const [selection, setSelection] = useState([]);
   const [brightness, setBrightness] = useState(2);
   const [brightnessMax, setBrightnessMax] = useState(10);
   const [fitKey, setFitKey] = useState(0);
@@ -64,6 +90,7 @@ export default function StudioPage({ onExit }) {
   const [notice, setNotice] = useState("");
   const [emptyDismissed, setEmptyDismissed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [primitiveItem, setPrimitiveItem] = useState(null);
 
   const dragDepth = useRef(0);
   const uploadedUrls = useRef(new Set());
@@ -72,9 +99,11 @@ export default function StudioPage({ onExit }) {
   const cursorRef = useRef(cursor);
   const cursorApi = useRef(null);
   const focusApi = useRef(null);
-  const deleteSelection = useRef(null);
+  const selectionRef = useRef(selection);
+  const keyActions = useRef({});
   const [topbarHeight, setTopbarHeight] = useState(64);
 
+  const selected = selection[0] || null;
   const readyKey = models.map((model) => (model.object ? "1" : "0")).join("");
 
   useEffect(() => {
@@ -82,15 +111,20 @@ export default function StudioPage({ onExit }) {
   }, [cursor]);
 
   useEffect(() => {
+    selectionRef.current = selection;
+  }, [selection]);
+
+  useEffect(() => {
     setSceneOpen(!compact);
     setInspectorOpen(!compact);
   }, [compact]);
 
   useEffect(() => {
-    if (!selected) return;
+    if (!selection.length) return;
     setInspectorOpen(true);
     if (compact) setSceneOpen(false);
-  }, [selected, compact]);
+    // Only the arrival of a selection should open the dock, not every edit.
+  }, [selection.length, compact]);
 
   useEffect(() => {
     const node = topbarRef.current;
@@ -129,35 +163,21 @@ export default function StudioPage({ onExit }) {
     [urls]
   );
 
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-      const key = event.key.toLowerCase();
-      if (key === "g") setTransformMode("translate");
-      else if (key === "r") setTransformMode("rotate");
-      else if (key === "s") setTransformMode("scale");
-      else if (key === "escape") setSelected(null);
-      else if (key === "delete" || key === "backspace") {
-        event.preventDefault();
-        deleteSelection.current?.();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   const placeCursor = useCallback((position) => setCursor(position), []);
   const handleCursorHold = useCallback((holding) => setCursorHold(holding), []);
+
+  // Shift-click extends the selection with a secondary object; a plain click
+  // replaces it and clicking empty space clears it.
+  const handleSelect = useCallback((object, event) => {
+    setSelection((prev) => {
+      if (!object) return event?.shiftKey ? prev : [];
+      if (event?.shiftKey) {
+        if (prev.includes(object)) return prev.filter((item) => item !== object);
+        return [...prev, object];
+      }
+      return [object];
+    });
+  }, []);
 
   const addModels = useCallback((entries) => {
     if (!entries.length) return;
@@ -178,6 +198,27 @@ export default function StudioPage({ onExit }) {
     setNotice("");
   }, []);
 
+  // Adds an already-built object (group, duplicate, boolean result) as a new
+  // scene entry without any loading or normalising.
+  const addBuiltObject = useCallback((object, name) => {
+    const id = nextId();
+    object.userData = { ...object.userData, studioModelId: id };
+    setModels((prev) => [
+      ...prev,
+      {
+        id,
+        name: name || object.name || "Object",
+        builtObject: object,
+        position: [0, 0, 0],
+        object: null,
+        visible: true,
+        format: "Mesh",
+        source: "primitive",
+      },
+    ]);
+    return object;
+  }, []);
+
   const addFiles = useCallback(
     (files) => {
       if (!files?.length) return;
@@ -196,7 +237,7 @@ export default function StudioPage({ onExit }) {
       });
       if (entries.length) {
         addModels(entries);
-        setSelected(null);
+        setSelection([]);
       }
       if (accepted.length !== files.length) {
         setNotice(`Unsupported file format. Add ${MODEL_LABEL} models.`);
@@ -221,11 +262,12 @@ export default function StudioPage({ onExit }) {
   );
 
   const insertPrimitive = useCallback(
-    (item) => {
+    (item, params) => {
       addModels([
         {
           name: item.label,
           primitive: item.key,
+          params,
           format: "Mesh",
           source: "primitive",
         },
@@ -233,6 +275,8 @@ export default function StudioPage({ onExit }) {
     },
     [addModels]
   );
+
+  const requestPrimitive = useCallback((item) => setPrimitiveItem(item), []);
 
   const insertLight = useCallback(
     (item) => {
@@ -267,7 +311,7 @@ export default function StudioPage({ onExit }) {
       addModels([
         {
           name: value,
-          text: value,
+          textOptions: { value },
           format: "Text",
           source: "primitive",
         },
@@ -314,8 +358,6 @@ export default function StudioPage({ onExit }) {
         }
       }
       if (owner === selected) {
-        // Renders the new name immediately; the group's name prop keeps it in
-        // sync with the model on later renders.
         selected.name = next;
         setModels((prev) =>
           prev.map((model) =>
@@ -336,17 +378,18 @@ export default function StudioPage({ onExit }) {
   );
 
   // Clicking through a hidden object in the viewport must not select it, and
-  // hiding the current selection drops it so the gizmo cannot move an invisible
-  // object.
+  // hiding any selected object drops it so the gizmo cannot move something
+  // invisible.
   useEffect(() => {
-    if (!selected) return;
-    for (let node = selected; node; node = node.parent) {
-      if (node.visible === false) {
-        setSelected(null);
-        return;
+    if (!selection.length) return;
+    const visible = selection.filter((object) => {
+      for (let node = object; node; node = node.parent) {
+        if (node.visible === false) return false;
       }
-    }
-  }, [models, selected]);
+      return true;
+    });
+    if (visible.length !== selection.length) setSelection(visible);
+  }, [models, selection]);
 
   const toggleModel = useCallback((id) => {
     setModels((prev) =>
@@ -369,55 +412,249 @@ export default function StudioPage({ onExit }) {
       }
       return prev.filter((model) => model.id !== id);
     });
-    setSelected((current) => {
-      if (!current) return current;
-      for (let node = current; node; node = node.parent) {
-        if (node.userData?.studioModelId === id) return null;
-      }
-      return current;
-    });
+    setSelection((current) =>
+      current.filter((object) => modelIdOf(object) !== id)
+    );
   }, []);
 
   // Removes the selected node (or its whole inserted model when a model root is
   // selected) from the scene. Delete/Backspace and the inspector's Delete
-  // button both use this.
+  // button both use this, for one or many objects.
   const removeSelection = useCallback(() => {
-    const target = selected;
-    if (!target || target === sceneRoot || !target.parent) return;
-    let owner = null;
-    for (let node = target; node; node = node.parent) {
-      if (node.userData?.studioModelId) {
-        owner = node;
-        break;
+    const targets = selectionRef.current.filter(Boolean);
+    if (!targets.length) return;
+    targets.forEach((target) => {
+      if (target === sceneRoot || !target.parent) return;
+      if (target.userData?.studioModelId) {
+        removeModel(target.userData.studioModelId);
+        return;
       }
-    }
-    if (owner && owner === target) {
-      removeModel(owner.userData.studioModelId);
-    } else {
       const parent = target.parent;
       parent.remove(target);
       // Drop the whole inserted model once its last mesh is gone, so the scene
       // tree does not keep an empty group behind.
-      let rootOwner = null;
-      for (let node = parent; node; node = node.parent) {
-        if (node.userData?.studioModelId) {
-          rootOwner = node;
-          break;
-        }
+      const rootOwnerId = modelIdOf(parent);
+      if (rootOwnerId) {
+        let hasMesh = false;
+        const ownerModel = models.find((model) => model.id === rootOwnerId);
+        ownerModel?.object?.traverse?.((node) => {
+          if (node.isMesh && !node.userData?.studioHelper) hasMesh = true;
+        });
+        if (!hasMesh) removeModel(rootOwnerId);
       }
-      let hasMesh = false;
-      rootOwner?.traverse?.((node) => {
-        if (node.isMesh) hasMesh = true;
-      });
-      if (rootOwner && !hasMesh) removeModel(rootOwner.userData.studioModelId);
+    });
+    setSelection([]);
+    setNotice(targets.length > 1 ? `Removed ${targets.length} objects` : `Removed ${targets[0].name || targets[0].type}`);
+  }, [sceneRoot, removeModel, models]);
+
+  const duplicateSelection = useCallback(() => {
+    const objects = selectionRef.current.filter(Boolean);
+    if (!objects.length) return;
+    const clones = objects.map((object) => {
+      const clone = duplicateObject(object);
+      clone.position.x += 0.4;
+      clone.position.z += 0.4;
+      return addBuiltObject(clone, clone.name);
+    });
+    setSelection(clones);
+    setNotice(`Duplicated ${clones.length} object${clones.length > 1 ? "s" : ""}`);
+  }, [addBuiltObject]);
+
+  const hideSelection = useCallback(() => {
+    const objects = selectionRef.current.filter(Boolean);
+    if (!objects.length) return;
+    objects.forEach((object) => {
+      object.visible = false;
+    });
+    setSelection([]);
+    setModels((prev) => prev.map((model) => ({ ...model })));
+    setNotice(`Hid ${objects.length} object${objects.length > 1 ? "s" : ""}`);
+  }, []);
+
+  const extrudeSelection = useCallback(() => {
+    const objects = selectionRef.current;
+    if (!objects.length) return;
+    objects.forEach((object) => collectMeshes(object).forEach((mesh) => extrudeGeometry(mesh, 0.08)));
+    setSelection((current) => [...current]);
+    setNotice("Extruded the selected mesh");
+  }, []);
+
+  const groupSelection = useCallback(() => {
+    const objects = selectionRef.current.filter(Boolean);
+    if (objects.length < 2) {
+      setNotice("Select at least two objects to group.");
+      return;
     }
-    setSelected(null);
-    setNotice(`Removed ${target.name || target.type}`);
-  }, [selected, sceneRoot, removeModel]);
+    const roots = objects.filter(
+      (object) => !objects.some((other) => other !== object && isDescendant(other, object))
+    );
+    // Collect the owning models before attaching anything: attach() re-parents
+    // the objects, which would hide the model id used to find them.
+    const consumed = new Set(roots.map(modelIdOf).filter(Boolean));
+    const group = new THREE.Group();
+    group.name = "Group";
+    roots.forEach((object) => group.attach(object));
+    setModels((prev) => prev.filter((model) => !consumed.has(model.id)));
+    addBuiltObject(group, "Group");
+    setSelection([group]);
+    setNotice(`Grouped ${roots.length} objects`);
+  }, [addBuiltObject]);
+
+  const ungroupSelection = useCallback(() => {
+    const group = selectionRef.current[0];
+    if (!group?.isGroup || !group.children.length) {
+      setNotice("Select a group to ungroup.");
+      return;
+    }
+    group.updateMatrixWorld(true);
+    const children = group.children.filter((child) => !child.userData?.studioHelper);
+    const detached = children.map((child) => {
+      const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      child.matrixWorld.decompose(position, quaternion, scale);
+      group.remove(child);
+      child.position.copy(position);
+      child.quaternion.copy(quaternion);
+      child.scale.copy(scale);
+      child.updateMatrixWorld(true);
+      return child;
+    });
+    const groupId = modelIdOf(group);
+    if (groupId) setModels((prev) => prev.filter((model) => model.id !== groupId));
+    detached.forEach((child) => addBuiltObject(child, child.name || "Object"));
+    setSelection(detached);
+    setNotice(`Split into ${detached.length} objects`);
+  }, [addBuiltObject]);
+
+  const booleanSelection = useCallback(
+    (operation) => {
+      const meshes = [];
+      selectionRef.current.forEach((object) => {
+        meshes.push(...collectMeshes(object));
+      });
+      if (meshes.length < 2) {
+        setNotice("Boolean needs at least two meshes.");
+        return;
+      }
+      let result = null;
+      try {
+        result = booleanMeshes(meshes, operation);
+      } catch (error) {
+        setNotice(`Boolean failed${error?.message ? ` — ${error.message}` : ""}.`);
+        return;
+      }
+      if (!result) {
+        setNotice("The boolean produced no geometry.");
+        return;
+      }
+      const consumed = new Set();
+      meshes.forEach((mesh) => {
+        const id = modelIdOf(mesh);
+        if (id) consumed.add(id);
+      });
+      setModels((prev) => prev.filter((model) => !consumed.has(model.id)));
+      result.name = BOOLEAN_LABELS[operation];
+      addBuiltObject(result, BOOLEAN_LABELS[operation]);
+      setSelection([result]);
+      setNotice(`${BOOLEAN_LABELS[operation]} applied`);
+    },
+    [addBuiltObject]
+  );
+
+  const moveToCursor = useCallback(() => {
+    const objects = selectionRef.current.filter(Boolean);
+    if (!objects.length) return;
+    const target = new THREE.Vector3(...cursorRef.current);
+    const offset = target.clone().sub(objects[0].position);
+    objects.forEach((object) => object.position.add(offset));
+    setSelection((current) => [...current]);
+    setNotice("Moved the selection to the 3D cursor");
+  }, []);
+
+  const alignSelection = useCallback(() => {
+    const objects = selectionRef.current.filter(Boolean);
+    if (objects.length < 2) return;
+    const primary = objects[0];
+    objects.slice(1).forEach((object) => {
+      object.position.x = primary.position.x;
+      object.position.z = primary.position.z;
+    });
+    setSelection((current) => [...current]);
+    setNotice("Aligned the selection");
+  }, []);
+
+  const dropSelection = useCallback(() => {
+    selectionRef.current.forEach((object) => dropToGround(object));
+    setSelection((current) => [...current]);
+    setNotice("Dropped the selection onto the grid");
+  }, []);
+
+  const resetSelectionTransform = useCallback(() => {
+    selectionRef.current.forEach((object) => {
+      object.rotation.set(0, 0, 0);
+      object.scale.set(1, 1, 1);
+    });
+    setSelection((current) => [...current]);
+    setNotice("Reset rotation and scale");
+  }, []);
+
+  const removeFromSelection = useCallback((object) => {
+    setSelection((current) => current.filter((item) => item !== object));
+  }, []);
 
   useEffect(() => {
-    deleteSelection.current = removeSelection;
-  }, [removeSelection]);
+    keyActions.current = {
+      delete: removeSelection,
+      duplicate: duplicateSelection,
+      hide: hideSelection,
+      extrude: extrudeSelection,
+      boolean: () => booleanSelection("union"),
+    };
+  }, [removeSelection, duplicateSelection, hideSelection, extrudeSelection, booleanSelection]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "g") setTransformMode("translate");
+      else if (key === "r") setTransformMode("rotate");
+      else if (key === "s") setTransformMode("scale");
+      else if (key === "escape") setSelection([]);
+      else if (key === "d") {
+        event.preventDefault();
+        keyActions.current.duplicate?.();
+      } else if (key === "e") {
+        event.preventDefault();
+        keyActions.current.extrude?.();
+      } else if (key === "h") {
+        event.preventDefault();
+        keyActions.current.hide?.();
+      } else if (key === "b") {
+        event.preventDefault();
+        keyActions.current.boolean?.();
+      } else if (key === "f") {
+        if (selectionRef.current[0]) focusApi.current?.focus(selectionRef.current[0]);
+      } else if (key === "i") {
+        setView((current) => ({ ...current, isolate: !current.isolate }));
+      } else if (key === "delete" || key === "backspace" || key === "x") {
+        event.preventDefault();
+        keyActions.current.delete?.();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const toggleView = (key) =>
     setView((current) => ({ ...current, [key]: !current[key] }));
@@ -436,7 +673,7 @@ export default function StudioPage({ onExit }) {
   };
 
   const resetScene = () => {
-    setSelected(null);
+    setSelection([]);
     setView((current) => ({ ...current, isolate: false }));
     setCameraView((current) => ({ dir: "iso", n: current.n + 1 }));
     setFitKey((value) => value + 1);
@@ -512,11 +749,12 @@ export default function StudioPage({ onExit }) {
           fitKey={fitKey}
           readyKey={readyKey}
           selected={selected}
+          selection={selection}
           transformMode={transformMode}
           scenePanelOpen={sceneOpen}
           cursorApi={cursorApi}
           focusApi={focusApi}
-          onSelect={setSelected}
+          onSelect={handleSelect}
           onReady={handleReady}
           onDetach={handleDetach}
           onError={handleError}
@@ -578,7 +816,7 @@ export default function StudioPage({ onExit }) {
                     <button
                       key={item.key}
                       type="button"
-                      onClick={() => insertPrimitive(item)}
+                      onClick={() => requestPrimitive(item)}
                     >
                       {item.label}
                     </button>
@@ -612,15 +850,15 @@ export default function StudioPage({ onExit }) {
             </button>
             <button
               type="button"
-              className={`studio-toggle${inspectorOpen && selected ? " is-active" : ""}`}
-              aria-pressed={inspectorOpen && Boolean(selected)}
-              aria-label="Toggle selection inspector"
-              title="Toggle selection inspector"
-              disabled={!selected}
+              className={`studio-toggle${inspectorOpen && selection.length ? " is-active" : ""}`}
+              aria-pressed={inspectorOpen && Boolean(selection.length)}
+              aria-label={selection.length > 1 ? "Toggle multiple selection inspector" : "Toggle selection inspector"}
+              title={selection.length > 1 ? "Multiple selection" : "Selection"}
+              disabled={!selection.length}
               onClick={toggleInspector}
             >
               <SlidersHorizontal size={15} />
-              <span>Inspect</span>
+              <span>{selection.length > 1 ? `Inspect (${selection.length})` : "Inspect"}</span>
             </button>
           </div>
         </div>
@@ -670,10 +908,11 @@ export default function StudioPage({ onExit }) {
         onClose={() => setSceneOpen(false)}
         models={models}
         selected={selected}
-        onSelect={setSelected}
+        selection={selection}
+        onSelect={handleSelect}
         onToggleModel={toggleModel}
         onInsert={insertLibrary}
-        onPrimitive={insertPrimitive}
+        onPrimitive={requestPrimitive}
         onLight={insertLight}
         onCurve={insertCurve}
         onText={insertText}
@@ -681,7 +920,7 @@ export default function StudioPage({ onExit }) {
         onPick={openPicker}
       />
 
-      {selected && (
+      {selection.length === 1 && (
         <SelectionPanel
           open={inspectorOpen}
           object={selected}
@@ -690,7 +929,39 @@ export default function StudioPage({ onExit }) {
           onNotice={setNotice}
           onDelete={removeSelection}
           onRename={renameSelection}
+          onUngroup={ungroupSelection}
           onClose={() => setInspectorOpen(false)}
+        />
+      )}
+
+      {selection.length > 1 && (
+        <MultiSelectionPanel
+          open={inspectorOpen}
+          objects={selection}
+          onClose={() => setInspectorOpen(false)}
+          onRemove={removeFromSelection}
+          onDelete={removeSelection}
+          onGroup={groupSelection}
+          onUngroup={ungroupSelection}
+          onBoolean={booleanSelection}
+          onDuplicate={duplicateSelection}
+          onMoveToCursor={moveToCursor}
+          onAlign={alignSelection}
+          onDropToGround={dropSelection}
+          onResetTransform={resetSelectionTransform}
+          onNotice={setNotice}
+        />
+      )}
+
+      {primitiveItem && (
+        <PrimitiveDialog
+          key={primitiveItem.key}
+          item={primitiveItem}
+          onCancel={() => setPrimitiveItem(null)}
+          onCreate={(params) => {
+            insertPrimitive(primitiveItem, params);
+            setPrimitiveItem(null);
+          }}
         />
       )}
 

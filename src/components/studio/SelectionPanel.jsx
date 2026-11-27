@@ -11,18 +11,93 @@ import {
   Download,
   Eye,
   EyeOff,
+  FlipHorizontal2,
   Focus,
   ImagePlus,
   Layers3,
+  Minus,
   Pencil,
   Plus,
+  Scissors,
+  Sparkles,
   Trash2,
+  Type,
   X,
 } from "lucide-react";
 import ExportMenu from "./ExportMenu";
+import ParamFields from "./ParamFields";
+import LightSection from "./LightSection";
 import { downloadBlob, slug } from "./exportScene";
+import { PRIMITIVE_FIELDS, reshapePrimitive } from "./primitives";
+import { CURVE_FIELDS, reshapeCurve } from "./curves";
+import { TEXT_FONTS, rebuildText } from "./texts";
+import {
+  extrudeGeometry,
+  mirrorMesh,
+  smoothMesh,
+  subdivideMesh,
+} from "./meshEdit";
 
 const number = (value) => Number(Number(value).toFixed(2));
+
+/** Material families offered in the inspector. */
+const MATERIAL_KINDS = [
+  { key: "standard", label: "Standard" },
+  { key: "physical", label: "Physical" },
+  { key: "glass", label: "Glass" },
+  { key: "emissive", label: "Emissive" },
+  { key: "toon", label: "Matte" },
+];
+
+const baseOf = (source) => ({
+  color: source?.color?.clone?.() || new THREE.Color("#b4aee6"),
+  map: source?.map ?? null,
+  side: source?.side ?? THREE.FrontSide,
+  transparent: source?.transparent ?? false,
+  opacity: source?.opacity ?? 1,
+  roughness: source?.roughness ?? 0.5,
+  metalness: source?.metalness ?? 0.05,
+  name: source?.name || "",
+});
+
+/** Builds the material for a family, keeping colour and texture. */
+function materialForKind(kind, source) {
+  const base = baseOf(source);
+  switch (kind) {
+    case "physical":
+      return new THREE.MeshPhysicalMaterial({ ...base });
+    case "glass":
+      return new THREE.MeshPhysicalMaterial({
+        ...base,
+        transmission: 0.92,
+        thickness: 0.45,
+        ior: 1.5,
+        roughness: 0.05,
+        metalness: 0,
+        transparent: true,
+        opacity: 1,
+        side: THREE.DoubleSide,
+        envMapIntensity: 1.2,
+      });
+    case "emissive":
+      return new THREE.MeshStandardMaterial({
+        ...base,
+        emissive: new THREE.Color(source?.emissive?.getHexString?.() || "#6a4dff"),
+        emissiveIntensity: source?.emissiveIntensity ?? 1,
+      });
+    case "toon":
+      return new THREE.MeshStandardMaterial({ ...base, roughness: 1, metalness: 0 });
+    case "standard":
+    default:
+      return new THREE.MeshStandardMaterial({ ...base });
+  }
+}
+
+const kindOf = (material) => {
+  if (material?.isMeshPhysicalMaterial) return "physical";
+  if (material?.emissive && material.emissive.getHex() !== 0) return "emissive";
+  return "standard";
+};
 
 /** Ready-made surfaces that can be applied to the whole selection. */
 const MATERIAL_PRESETS = [
@@ -100,6 +175,7 @@ export default function SelectionPanel({
   onClose,
   onDelete,
   onRename,
+  onUngroup,
   onNotice,
 }) {
   const [, refresh] = useState(0);
@@ -110,6 +186,8 @@ export default function SelectionPanel({
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState("");
   const [textureUrl, setTextureUrl] = useState("");
+  const [extrudeAmount, setExtrudeAmount] = useState(0.1);
+  const [textDraft, setTextDraft] = useState("");
   const textureFile = useRef(null);
   const customTexture = useRef(null);
   const textureUrlRef = useRef("");
@@ -135,6 +213,7 @@ export default function SelectionPanel({
     setAddOpen(false);
     setActiveSlot(0);
     setDraft(object.name || object.type || "Object");
+    setTextDraft(object.userData?.studioText?.value || "");
   }, [object]);
 
   useEffect(() => {
@@ -165,7 +244,8 @@ export default function SelectionPanel({
   // a memo keyed only on the object would keep pointing at the old ones.
   const meshes = [];
   object.traverse?.((node) => {
-    if (node.isMesh) meshes.push(node);
+    // Lamp markers and other internal helper parts are not real geometry.
+    if (node.isMesh && !node.userData?.studioHelper) meshes.push(node);
   });
 
   const slotCount = meshes.reduce(
@@ -185,6 +265,53 @@ export default function SelectionPanel({
 
   const map = material?.map;
   const mapSource = map?.image?.src || "";
+
+  const primitive = object.userData?.studioPrimitive;
+  const curve = object.userData?.studioCurve;
+  const textParams = object.userData?.studioText;
+  let light = null;
+  object.traverse?.((node) => {
+    if (!light && node.isLight) light = node;
+  });
+
+  const applyText = async (next) => {
+    try {
+      await rebuildText(object, { ...textParams, ...next });
+      update();
+    } catch {
+      onNotice?.("Could not rebuild that text face.");
+    }
+  };
+
+  const commitExtrude = () => {
+    if (!meshes.length) return;
+    meshes.forEach((mesh) => extrudeGeometry(mesh, extrudeAmount));
+    update();
+    onNotice?.(`Extruded the mesh by ${extrudeAmount}`);
+  };
+
+  // "Exclude" hides the other parts of the same object so one mesh can be
+  // worked on alone, and Show all brings the rest back.
+  const excludeOthers = () => {
+    if (!meshes.length) return;
+    const keep = new Set(meshes);
+    let owner = object;
+    while (owner.parent) owner = owner.parent;
+    owner.traverse((node) => {
+      if (node.isMesh && !node.userData?.studioHelper) node.visible = keep.has(node);
+    });
+    update();
+    onNotice?.("Excluded the other meshes");
+  };
+
+  const showAllParts = () => {
+    let owner = object;
+    while (owner.parent) owner = owner.parent;
+    owner.traverse((node) => {
+      if (node.isMesh && !node.userData?.studioHelper) node.visible = true;
+    });
+    update();
+  };
 
   const details = useMemo(() => {
     const chain = [];
@@ -494,6 +621,15 @@ export default function SelectionPanel({
               {object.visible ? <Eye size={13} /> : <EyeOff size={13} />}
               {object.visible ? "Hide" : "Show"}
             </button>
+            {object.isGroup && (
+              <button
+                type="button"
+                onClick={onUngroup}
+                title="Split this group into separate objects"
+              >
+                <Scissors size={13} /> Ungroup
+              </button>
+            )}
             <button
               type="button"
               className="inspector-delete"
@@ -550,6 +686,140 @@ export default function SelectionPanel({
           </div>
         </section>
 
+        {primitive && (
+          <section className="inspector-section">
+            <h3>Shape</h3>
+            <ParamFields
+              fields={PRIMITIVE_FIELDS[primitive.key] || []}
+              values={primitive.params}
+              columns={3}
+              onChange={(key, value) => {
+                reshapePrimitive(object, { ...primitive.params, [key]: value });
+                update();
+              }}
+            />
+            <p className="inspector-hint">
+              Dimensions rebuild the mesh instantly.
+            </p>
+          </section>
+        )}
+
+        {curve && (
+          <section className="inspector-section">
+            <h3>Curve</h3>
+            {(CURVE_FIELDS[curve.key] || []).map((field) => (
+              <label className="inspector-slider" key={field.key}>
+                <span>{field.label}</span>
+                <input
+                  type="range"
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  value={curve.params[field.key]}
+                  onChange={(event) => {
+                    reshapeCurve(object, {
+                      ...curve.params,
+                      [field.key]: Number(event.target.value),
+                    });
+                    update();
+                  }}
+                />
+                <b>{Number(curve.params[field.key]).toFixed(2)}</b>
+              </label>
+            ))}
+            <p className="inspector-hint">
+              Drag a value to extend, twist or reshape the curve.
+            </p>
+          </section>
+        )}
+
+        {textParams && (
+          <section className="inspector-section">
+            <h3>
+              <Type size={13} /> Text
+            </h3>
+            <form
+              className="inspector-text"
+              onSubmit={(event) => {
+                event.preventDefault();
+                applyText({ value: textDraft });
+              }}
+            >
+              <textarea
+                rows={2}
+                value={textDraft}
+                aria-label="Text content"
+                onChange={(event) => setTextDraft(event.target.value)}
+              />
+              <button type="submit" className="st-btn is-primary">
+                Apply
+              </button>
+            </form>
+
+            <label className="inspector-select">
+              <span>Font</span>
+              <select
+                value={textParams.font}
+                onChange={(event) => applyText({ font: event.target.value })}
+              >
+                {TEXT_FONTS.map((font) => (
+                  <option key={font.key} value={font.key}>
+                    {font.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="inspector-toggles">
+              <label className="inspector-check">
+                <span>Bold</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(textParams.bold)}
+                  onChange={(event) => applyText({ bold: event.target.checked })}
+                />
+              </label>
+              <label className="inspector-check">
+                <span>Italic</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(textParams.italic)}
+                  onChange={(event) => applyText({ italic: event.target.checked })}
+                />
+              </label>
+              <label className="inspector-check">
+                <span>Underline</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(textParams.underline)}
+                  onChange={(event) => applyText({ underline: event.target.checked })}
+                />
+              </label>
+            </div>
+
+            {[
+              ["Size", "size", 0.2, 4, 0.05],
+              ["Depth", "depth", 0.02, 1.5, 0.01],
+              ["Smoothness", "curveSegments", 1, 24, 1],
+            ].map(([label, key, min, max, step]) => (
+              <label className="inspector-slider" key={key}>
+                <span>{label}</span>
+                <input
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={textParams[key]}
+                  onChange={(event) =>
+                    applyText({ [key]: Number(event.target.value) })
+                  }
+                />
+                <b>{Number(textParams[key]).toFixed(key === "curveSegments" ? 0 : 2)}</b>
+              </label>
+            ))}
+          </section>
+        )}
+
         <section className="inspector-section">
           <h3>Transform</h3>
           {[
@@ -601,6 +871,8 @@ export default function SelectionPanel({
             </div>
           ))}
         </section>
+
+        {light && <LightSection object={object} root={root} />}
 
         {meshes.length > 0 && (
         <section className="inspector-section">
@@ -719,10 +991,47 @@ export default function SelectionPanel({
               </div>
             </div>
 
+            <label className="inspector-select">
+              <span>Material type</span>
+              <select
+                value={kindOf(material)}
+                onChange={(event) => {
+                  const kind = event.target.value;
+                  meshes.forEach((mesh) => {
+                    const list = [...materialList(mesh)];
+                    const current = list[slotIndex];
+                    if (!current) return;
+                    list[slotIndex] = materialForKind(kind, current);
+                    assignSlots(mesh, list);
+                  });
+                  update();
+                  onNotice?.(`Material set to ${kind}`);
+                }}
+              >
+                {MATERIAL_KINDS.map((kind) => (
+                  <option key={kind.key} value={kind.key}>
+                    {kind.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             {[
               ["Roughness", "roughness", 0, 1, 0.05],
               ["Metalness", "metalness", 0, 1, 0.05],
               ["Opacity", "opacity", 0, 1, 0.05],
+              ...(material.isMeshPhysicalMaterial
+                ? [
+                    ["Transmission", "transmission", 0, 1, 0.02],
+                    ["IOR", "ior", 1, 2.5, 0.01],
+                    ["Thickness", "thickness", 0, 3, 0.05],
+                    ["Clearcoat", "clearcoat", 0, 1, 0.05],
+                    ["Coat roughness", "clearcoatRoughness", 0, 1, 0.05],
+                  ]
+                : []),
+              ...("envMapIntensity" in material
+                ? [["Env. intensity", "envMapIntensity", 0, 3, 0.05]]
+                : []),
             ].map(([label, key, min, max, step]) => (
               <label className="inspector-slider" key={key}>
                 <span>{label}</span>
@@ -744,6 +1053,44 @@ export default function SelectionPanel({
                 <b>{Number(material[key] ?? 1).toFixed(2)}</b>
               </label>
             ))}
+
+            {(material.isMeshStandardMaterial || material.emissive) && (
+              <div className="inspector-material is-compact">
+                <input
+                  type="color"
+                  aria-label="Emissive colour"
+                  value={`#${material.emissive?.getHexString?.() || "000000"}`}
+                  onChange={(event) => {
+                    const color = event.target.value;
+                    editMaterial((item) => item.emissive?.set(color));
+                  }}
+                />
+                <div>
+                  <b>Emission</b>
+                  <small>Glow colour of this material</small>
+                </div>
+              </div>
+            )}
+
+            {"emissiveIntensity" in material && (
+              <label className="inspector-slider">
+                <span>Glow</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={4}
+                  step={0.05}
+                  value={material.emissiveIntensity ?? 1}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    editMaterial((item) => {
+                      item.emissiveIntensity = value;
+                    });
+                  }}
+                />
+                <b>{Number(material.emissiveIntensity ?? 1).toFixed(2)}</b>
+              </label>
+            )}
 
             <div className="inspector-toggles">
               <label className="inspector-check">
@@ -789,6 +1136,96 @@ export default function SelectionPanel({
           </section>
         )}
 
+        {meshes.length > 0 && (
+          <section className="inspector-section">
+            <h3>Edit mesh</h3>
+            <label className="inspector-slider">
+              <span>Extrude</span>
+              <input
+                type="range"
+                min={-0.5}
+                max={0.5}
+                step={0.01}
+                value={extrudeAmount}
+                onChange={(event) => setExtrudeAmount(Number(event.target.value))}
+              />
+              <b>{extrudeAmount.toFixed(2)}</b>
+            </label>
+            <div className="inspector-actions">
+              <button
+                type="button"
+                onClick={commitExtrude}
+                title="Push every face along its normal (E)"
+              >
+                <Scissors size={13} /> Extrude
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  meshes.forEach(smoothMesh);
+                  update();
+                }}
+                title="Recompute smooth normals"
+              >
+                <Sparkles size={13} /> Smooth
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  meshes.forEach(subdivideMesh);
+                  update();
+                  onNotice?.("Subdivided the mesh");
+                }}
+                title="Split long edges for finer detail"
+              >
+                <Plus size={13} /> Subdivide
+              </button>
+            </div>
+            <div className="inspector-actions">
+              {["x", "y", "z"].map((axis) => (
+                <button
+                  type="button"
+                  key={axis}
+                  onClick={() => {
+                    meshes.forEach((mesh) => mirrorMesh(mesh, axis));
+                    update();
+                  }}
+                  title={`Mirror on ${axis.toUpperCase()}`}
+                >
+                  <FlipHorizontal2 size={13} /> {axis.toUpperCase()}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  meshes.forEach((mesh) => extrudeGeometry(mesh, -extrudeAmount));
+                  update();
+                }}
+                title="Pull every face inward"
+              >
+                <Minus size={13} /> Inset
+              </button>
+            </div>
+            <div className="inspector-actions">
+              <button
+                type="button"
+                onClick={excludeOthers}
+                title="Hide the other parts of this object"
+              >
+                <EyeOff size={13} /> Exclude others
+              </button>
+              <button type="button" onClick={showAllParts} title="Show every part again">
+                <Eye size={13} /> Show all
+              </button>
+            </div>
+            <p className="inspector-hint">
+              Shift-click in the viewport to add meshes, then use Boolean in the
+              multiple selection panel.
+            </p>
+          </section>
+        )}
+
+        {meshes.length > 0 && (
         <section className="inspector-section">
           <h3>Texture</h3>
           <div className="inspector-texture">
@@ -833,9 +1270,10 @@ export default function SelectionPanel({
             }}
           />
         </section>
+        )}
 
         <div className="inspector-hint">
-          <Box size={13} /> Delete removes the selection · Esc clears it
+          <Box size={13} /> G · R · S transform · E extrude · D duplicate · H hide · Esc clears
         </div>
       </div>
 
@@ -861,5 +1299,6 @@ SelectionPanel.propTypes = {
   onClose: PropTypes.func.isRequired,
   onDelete: PropTypes.func,
   onRename: PropTypes.func,
+  onUngroup: PropTypes.func,
   onNotice: PropTypes.func,
 };

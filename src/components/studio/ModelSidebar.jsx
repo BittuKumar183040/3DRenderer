@@ -17,8 +17,18 @@ TypeIcon.propTypes = {
   node: PropTypes.object.isRequired,
 };
 
-function NodeRow({ node, depth, selected, onSelect, onToggleNode, onRefresh }) {
+function NodeRow({
+  node,
+  depth,
+  selected,
+  selection,
+  onSelect,
+  onToggleNode,
+  onRefresh,
+}) {
   const [open, setOpen] = useState(depth === 0);
+  const picked = selection?.includes(node) ?? selected === node;
+  const secondary = picked && selected !== node;
   const rowRef = useRef(null);
   // Objects are built from internal parts (lamps add their marker and target)
   // that would only clutter the tree, so only real structure is listed.
@@ -49,18 +59,18 @@ function NodeRow({ node, depth, selected, onSelect, onToggleNode, onRefresh }) {
     <div className="tree-node">
       <div
         ref={rowRef}
-        className={`tree-row${selected === node ? " is-selected" : ""}`}
+        className={`tree-row${picked ? " is-selected" : ""}${secondary ? " is-secondary" : ""}`}
         style={{ paddingLeft: `${8 + depth * 13}px` }}
         role="treeitem"
-        aria-selected={selected === node}
+        aria-selected={picked}
         aria-expanded={children.length ? open : undefined}
         tabIndex={0}
-        title={node.name || node.type}
-        onClick={() => onSelect(node)}
+        title={secondary ? `${node.name || node.type} (secondary)` : node.name || node.type}
+        onClick={(event) => onSelect(node, event)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            onSelect(node);
+            onSelect(node, event);
           }
         }}
       >
@@ -114,6 +124,7 @@ function NodeRow({ node, depth, selected, onSelect, onToggleNode, onRefresh }) {
             node={child}
             depth={depth + 1}
             selected={selected}
+            selection={selection}
             onSelect={onSelect}
             onToggleNode={onToggleNode}
             onRefresh={onRefresh}
@@ -127,6 +138,7 @@ NodeRow.propTypes = {
   node: PropTypes.object.isRequired,
   depth: PropTypes.number.isRequired,
   selected: PropTypes.object,
+  selection: PropTypes.arrayOf(PropTypes.object),
   onSelect: PropTypes.func.isRequired,
   onToggleNode: PropTypes.func.isRequired,
   onRefresh: PropTypes.func.isRequired,
@@ -141,6 +153,7 @@ export default function ModelSidebar({
   onClose,
   models,
   selected,
+  selection,
   onSelect,
   onToggleModel,
   onInsert,
@@ -212,6 +225,7 @@ export default function ModelSidebar({
               node={model.object}
               depth={0}
               selected={selected}
+              selection={selection}
               onSelect={onSelect}
               onToggleNode={toggleNode}
               onRefresh={bump}
@@ -248,6 +262,7 @@ ModelSidebar.propTypes = {
   onClose: PropTypes.func.isRequired,
   models: PropTypes.array.isRequired,
   selected: PropTypes.object,
+  selection: PropTypes.arrayOf(PropTypes.object),
   onSelect: PropTypes.func.isRequired,
   onToggleModel: PropTypes.func.isRequired,
   onInsert: PropTypes.func.isRequired,
