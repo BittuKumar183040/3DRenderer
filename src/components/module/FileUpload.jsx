@@ -138,17 +138,11 @@ const FileUpload = ({ fileData, onOpenStudio = () => {} }) => {
         <span className="brand-mark"><Box size={18} /></span>
         <span className="brand-name">Bexyzo<span className="brand-dot">.</span></span>
       </a>
-      <div className="nav-center">
-        <span className="nav-indicator" />
-        <span className="nav-label">Workspace</span>
-        <span className="nav-muted">/ Local session</span>
-      </div>
       <div className="nav-right">
         <button className="nav-studio" type="button" onClick={onOpenStudio}>
           <Box size={13} /> <span>Studio</span>
         </button>
         <a className="nav-link" href="#library">Library <ArrowRight size={13} /></a>
-        <span className="status-chip"><span /> Ready</span>
         <button className="nav-cta" type="button" onClick={openPicker}>
           <UploadCloud size={14} /> Open file
         </button>
@@ -166,15 +160,6 @@ const FileUpload = ({ fileData, onOpenStudio = () => {} }) => {
             <span className="button-shine" aria-hidden="true" />
           </button>
           <a className="ghost-button" href="#library"><Grid2X2 size={15} /> Explore demos <ArrowRight size={14} /></a>
-        </div>
-        <div className="hero-tags reveal" style={{ "--d": "270ms" }}>
-          <span><i className="tag-dot purple" />Interactive by default</span>
-          <span><i className="tag-dot green" />Runs in your browser</span>
-        </div>
-        <div className="hero-stats reveal" style={{ "--d": "330ms" }}>
-          <span><b>05</b><small>Formats</small></span>
-          <span><b>06</b><small>Demos</small></span>
-          <span><b>100%</b><small>Local</small></span>
         </div>
       </div>
 
