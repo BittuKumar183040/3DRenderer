@@ -24,6 +24,8 @@ import frameModel from "../../assets/frame.glb";
 import frame from "./images/frame.png";
 import chargerModel from "../../assets/charger.glb";
 import charger from "./images/charger.png";
+import billMachineModel from "../../assets/billmachine.glb";
+import billMachine from "./images/billmachine.png";
 import girlModel from "../../assets/girl.fbx";
 import girl from "./images/girl.png";
 import dna from "../../assets/dna.svg?raw";
@@ -36,6 +38,7 @@ const SUPPORTED = ["glb", "gltf", "fbx", "svg", "vtk"];
 const DEMOS = [
   { key: "frame", label: "Studio frame", ext: "GLB", kind: "3D model", img: frame, color: "lavender" },
   { key: "charger", label: "Power charger", ext: "GLB", kind: "3D model", img: charger, color: "peach" },
+  { key: "billmachine", label: "Bill machine", ext: "GLB", kind: "3D model", img: billMachine, color: "mint" },
   { key: "girl", label: "Character study", ext: "FBX", kind: "3D model", img: girl, color: "blue" },
   { key: "dna", label: "DNA molecule", ext: "SVG", kind: "Vector", img: dnaPreview, color: "mint" },
   { key: "break", label: "Paddle analysis", ext: "VTK", kind: "Scientific", img: breakPaddle, color: "rose" },
@@ -142,6 +145,7 @@ const FileUpload = ({ fileData, onOpenStudio = () => {} }) => {
     const pick = {
       frame: () => fileData({ file: frameModel, name: "frame", extension: "glb" }),
       charger: () => fileData({ file: chargerModel, name: "charger", extension: "glb" }),
+      billmachine: () => fileData({ file: billMachineModel, name: "billmachine", extension: "glb" }),
       girl: () => fileData({ file: girlModel, name: "girl", extension: "fbx" }),
       break: () => fileData({ file: { name: "break", extension: "vtk", file: vtkSample }, name: "break", extension: "vtk" }),
       dna: () => fileData({ file: new File([dna], "dna.svg", { type: "image/svg+xml" }), name: "dna", extension: "svg" }),
