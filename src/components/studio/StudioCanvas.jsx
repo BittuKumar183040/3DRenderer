@@ -308,6 +308,7 @@ export default function StudioCanvas({
   scenePanelOpen,
   cursorApi,
   focusApi,
+  editable = true,
   onSelect,
   onReady,
   onDetach,
@@ -414,16 +415,24 @@ export default function StudioCanvas({
       )}
       <AnimationTicker mixers={mixers} />
 
-      <Cursor3D position={cursor} visible={view.cursor} />
-      <CursorPointer
-        objects={objects}
-        enabled={view.cursor}
-        onPlace={onPlaceCursor}
-        onHold={onCursorHold}
-      />
-      <CursorBridge apiRef={cursorApi} />
+      {editable && (
+        <>
+          <Cursor3D position={cursor} visible={view.cursor} />
+          <CursorPointer
+            objects={objects}
+            enabled={view.cursor}
+            onPlace={onPlaceCursor}
+            onHold={onCursorHold}
+          />
+          <CursorBridge apiRef={cursorApi} />
+          <TransformGizmo
+            object={selected}
+            mode={transformMode}
+            onBusyChange={handleBusy}
+          />
+        </>
+      )}
       <FocusBridge apiRef={focusApi} />
-      <TransformGizmo object={selected} mode={transformMode} onBusyChange={handleBusy} />
 
       <IsolateObject enabled={view.isolate} root={sceneRoot} selected={selected} />
       <SceneCapture onScene={onScene} />
@@ -458,6 +467,7 @@ StudioCanvas.propTypes = {
   scenePanelOpen: PropTypes.bool,
   cursorApi: PropTypes.shape({ current: PropTypes.any }),
   focusApi: PropTypes.shape({ current: PropTypes.any }),
+  editable: PropTypes.bool,
   onSelect: PropTypes.func.isRequired,
   onReady: PropTypes.func.isRequired,
   onDetach: PropTypes.func.isRequired,

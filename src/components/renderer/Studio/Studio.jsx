@@ -1,22 +1,24 @@
 import PropTypes from "prop-types";
-import GltfViewer from "./gltf/GltfViewer";
-import FbxViewer from "./fbx/FbxViewer";
-import SvgViewer from "./svg/SvgViewer";
+import ModelViewer from "./viewer/ModelViewer";
 import VtkViewer from "./vtk/VTK";
 import ShaderViewer from "./shader/Custom";
 import "./studio.css";
 
+// One read-only viewer built on the studio canvas handles every 3D model and
+// vector format, so shadows, helpers, scene tree, inspector and animation
+// playback are identical across formats.
 const VIEWERS = {
-  glb: GltfViewer,
-  fbx: FbxViewer,
-  svg: SvgViewer,
+  glb: ModelViewer,
+  gltf: ModelViewer,
+  fbx: ModelViewer,
+  svg: ModelViewer,
   vtk: VtkViewer,
   custom: ShaderViewer,
 };
 
 /**
- * Entry point for the 3D studio. Each format lives in its own folder under
- * Studio/ (gltf, fbx, svg, vtk, shader) and shares the shell chrome.
+ * Entry point for the 3D viewers. GLB, GLTF, FBX and SVG open in the shared
+ * read-only model viewer; VTK and the live shader keep their own stages.
  */
 export default function Studio({ file, onExit }) {
   const Viewer = VIEWERS[file.extension];

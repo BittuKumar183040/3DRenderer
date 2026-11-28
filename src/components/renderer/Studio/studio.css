@@ -1099,6 +1099,20 @@
   cursor: pointer;
 }
 
+.inspector-actions.is-plain {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.inspector-swatch {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+}
+
 .inspector-material b {
   display: block;
   color: #383a47;
@@ -1456,6 +1470,15 @@
   z-index: 38;
   width: min(320px, calc(100vw - 28px));
   animation: animRise 0.28s var(--s-ease) both;
+}
+
+/* The viewers share the studio canvas but keep both docks, so the player sits
+   centred under the viewport instead of underneath the scene tree. */
+.renderer-workspace .studio-anim.is-floating {
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: min(360px, calc(100vw - 32px));
 }
 
 .studio-anim.is-inline {
